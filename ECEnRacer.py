@@ -35,7 +35,7 @@ writer = None
 Car = Arduino("/dev/ttyUSB0", 115200)                # Linux
 #Car = Arduino("/dev/tty.usbserial-2140", 115200)    # Mac
 
-Car.zero(1500)      # Set car to go straight.  Change this for your car.
+Car.zero(1440)      # Set car to go straight.  Change this for your car.
 Car.pid(1)          # Use PID control
 # You can use kd and kp commands to change KP and KD values.  Default values are good.
 # loop over frames from Realsense
@@ -52,6 +52,7 @@ while True:
     '''
     Control the Car
     '''
+    car.Steer
 
     '''
    	IMPORTANT: Never go full speed. Use CarTest.py to selest the best speed for you.
