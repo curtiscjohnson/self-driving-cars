@@ -74,14 +74,13 @@ random.seed(seed)
 # can also pass a start location if you know the code: (y tile index, x tile index, position index, direction index)
 # - position index is from 0-(number of connections the tile has - 1), so a straight is 0 or 1, a t is 0, 1, or 2.
 # - direction index is 0 or 1 for normal or reversed.
-sim.start(mapSeed="real", mapParameters=mapParameters, carParameters=carParameters)
+sim.start(mapSeed="real", mapParameters=mapParameters, carParameters=carParameters, startPoint=(1,1,1,2))
 
 car = sim.ackermann
 
 # I get ~20ms per loop on my computer, so roughly 1.5x real-world speed at 30fps.
 
-
-def get_blob_x(bgr_img):
+def get_yellow_blob_x(bgr_img):
     """gets x coord of centerline blob to follow
 
     Args:
@@ -115,18 +114,55 @@ def get_blob_x(bgr_img):
 
     return blobToFollowCoords[0]
 
+def get_red_centers(bgr_img):
+    rgb_img = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2RGB)
+    # Get grayscale image with only centerline (yellow colors)
+    lower_red = np.array([240,0,0])
+    upper_red = np.array([255,0,0])
+    stopline_gray_img = cv2.inRange(rgb_img, lower_red, upper_red) # get only yellow colors in image
+    
+    # Get Contours for center line blobs
+    contours, hierarchy = cv2.findContours(stopline_gray_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    centers = []
+    for i in contours:
+        M = cv2.moments(i)
+        if M['m00'] != 0:
+            cx = int(M['m10']/M['m00'])
+            cy = int(M['m01']/M['m00'])
+            if cx > rgb_img.shape[1]/4 and cx < rgb_img.shape[1]*3/4 and cy > rgb_img.shape[0]/2:
+                cv2.drawContours(rgb_img, [i], -1, (0,255,0), 2)
+                cv2.circle(rgb_img, (cx, cy), 7, (0, 0, 255), -1)
+                centers.append((cx, cy))
+                # print(f"x: {cx}, y: {cy}")
+
+    centers.sort(key = lambda x: x[0])
+    return centers
+
 ## SETUP PID Controller
 pid = PID()
 pid.Ki = -.01*0
-pid.Kd = -.01
-pid.Kp = -30/300 #degrees per pixel
-frameUpdate = 5
+pid.Kd = -.01*0
+pid.Kp = -30/250 #degrees per pixel
+frameUpdate = 1
 pid.sample_time = frameUpdate/30.0
 pid.output_limits = (-30,30)
-desXCoord = cameraSettings['resolution'][0]//2
+desXCoord = cameraSettings['resolution'][0]//4
 pid.setpoint = desXCoord
+
+## Setup PID Controller for Speed
+speed = 0.2
+speed_pid = PID()
+speed_pid.Ki = -.01*0
+speed_pid.Kd = -.5*0
+speed_pid.Kp = 1/400 # speed per pixel
+speed_pid.sample_time = 1/30.0
+speed_pid.output_limits = (0.0, speed)
+speed_pid.setpoint = cameraSettings['resolution'][1]-100
+
+
 i = 1
-Arduino.setSpeed(.2)
+
+Arduino.setSpeed(speed)
 
 while(True):
     img = realsense.getFrame() #time step entire simulation
@@ -142,10 +178,20 @@ while(True):
     #control loop
     if i%frameUpdate==0:
         i=0
-        blobX = get_blob_x(img)
+        blobX = get_yellow_blob_x(img)
         angle = pid(blobX)
-        print(f"commanded steering angle: {angle}")
+        # print(f"commanded steering angle: {angle}")
         Arduino.setSteering(angle)
+
+        # Speed Controller
+        red_centers = get_red_centers(img)
+        if len(red_centers) != 0:
+            red_centers.sort(key = lambda x: x[0])
+            stopLineCoords = red_centers[-1]
+            speed = speed_pid(stopLineCoords[1])
+            Arduino.setSpeed(speed)
+        print(f"speed: {speed}, commanded steering angle: {angle}")
+
 
 
     i+=1
