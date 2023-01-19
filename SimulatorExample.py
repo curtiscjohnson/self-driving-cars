@@ -6,6 +6,10 @@ import cv2
 from simulation import coordinate
 import numpy as np
 
+from simple_pid import PID
+
+import matplotlib.pyplot as plt
+
 # Can pass "cameraSettings" - see the camera.py file for options.
 # M and D matrices not currently used, D could be used for distortion but that would need to be implemented in camera.py - wouldn't be too bad to do
 # Units are pixels for resolution, degrees for fov, degrees for angle, and pixels for height.
@@ -43,15 +47,15 @@ realSteer = updateSteer(controlSteer)
 
 cv2.namedWindow("map", cv2.WINDOW_NORMAL)
 cv2.namedWindow("car", cv2.WINDOW_NORMAL)
-cv2.createTrackbar("speed", "map", controlSpeed, speedUnits, updateSpeed)
-cv2.createTrackbar("steer", "map", controlSteer, maxSteer * 2, updateSteer)
+# cv2.createTrackbar("speed", "map", controlSpeed, speedUnits, updateSpeed)
+# cv2.createTrackbar("steer", "map", controlSteer, maxSteer * 2, updateSteer)
 
 # Can pass map parameters:
 mapParameters = {
-    "loops": 10,
+    "loops": 4,
     "size": (10, 10),
     "expansions": 40,
-    "complications": 0
+    "complications": 5
 }
 
 # Can also pass car parameters for max/min speed, etc
@@ -70,13 +74,62 @@ random.seed(seed)
 # can also pass a start location if you know the code: (y tile index, x tile index, position index, direction index)
 # - position index is from 0-(number of connections the tile has - 1), so a straight is 0 or 1, a t is 0, 1, or 2.
 # - direction index is 0 or 1 for normal or reversed.
-sim.start(mapSeed=seed, mapParameters=mapParameters, carParameters=carParameters)
+sim.start(mapSeed="real", mapParameters=mapParameters, carParameters=carParameters)
 
 car = sim.ackermann
 
 # I get ~20ms per loop on my computer, so roughly 1.5x real-world speed at 30fps.
+
+
+def get_blob_x(bgr_img):
+    """gets x coord of centerline blob to follow
+
+    Args:
+        img (_type_): BGR image from realsense camera
+
+    Returns:
+        float: x coordinate of the closest blob
+    """
+    rgb_img = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2RGB)
+    # plt.imshow(rgb_img)
+    # plt.show()
+    # Get grayscale image with only centerline (yellow colors)
+    lower_yellow = np.array([240,240,0])
+    upper_yellow = np.array([255,255,0])
+    centerline_gray_img = cv2.inRange(rgb_img, lower_yellow, upper_yellow) # get only yellow colors in image
+
+    # Get Contours for center line blobs
+    contours, hierarchy = cv2.findContours(centerline_gray_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    centers = []
+    for i in contours:
+        M = cv2.moments(i)
+        if M['m00'] != 0:
+            cx = int(M['m10']/M['m00'])
+            cy = int(M['m01']/M['m00'])
+            if cy > rgb_img.shape[0]//2:
+                centers.append((cx, cy))
+
+    centers.sort(key = lambda x: x[1])
+    blobToFollowCoords = centers[-1]
+
+    return blobToFollowCoords[0]
+
+## SETUP PID Controller
+pid = PID()
+pid.Ki = -.01*0
+pid.Kd = -.01
+pid.Kp = -30/300 #degrees per pixel
+frameUpdate = 5
+pid.sample_time = frameUpdate/30.0
+pid.output_limits = (-30,30)
+desXCoord = cameraSettings['resolution'][0]//2
+pid.setpoint = desXCoord
+i = 1
+Arduino.setSpeed(.2)
+
 while(True):
-    img = realsense.getFrame()
+    img = realsense.getFrame() #time step entire simulation
     carPlace = car.getCoord()
     newImg = realsense.currentImg.copy()
     newImg = cv2.line(newImg, carPlace.asInt(), (carPlace + 100*coordinate.unitFromAngle(car.currentState.theta, isRadians = True)).asInt(), (0, 255, 0), 3)
@@ -85,7 +138,20 @@ while(True):
     cv2.imshow("map", newImg)
     cv2.imshow("car", img)
     statData = sim.getStats()
+
+    #control loop
+    if i%frameUpdate==0:
+        i=0
+        blobX = get_blob_x(img)
+        angle = pid(blobX)
+        print(f"commanded steering angle: {angle}")
+        Arduino.setSteering(angle)
+
+
+    i+=1
+
     if (cv2.waitKey(1) == ord('q')): # this simulator waits for a keypress every frame because otherwise it'd be really hard to control I think.
         # You could probably implement arrow key control, but... I didn't.  So.
         # Press q to quit, anything else to advance 1/30 second.
         break
+    
