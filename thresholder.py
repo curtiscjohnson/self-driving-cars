@@ -70,7 +70,7 @@ parser.add_argument('--camera', help='Camera divide number.', default=0, type=in
 args = parser.parse_args()
 
 ## [cap]
-# cap = cv.VideoCapture(args.camera)
+cap = cv.VideoCapture("/dev/video2")
 ## [cap]
 
 ## [window]
@@ -89,8 +89,8 @@ cv.createTrackbar(high_V_name, window_detection_name , high_V, max_value, on_hig
 
 while True:
     ## [while]
-    # ret, frame = cap.read()
-    frame = cv.imread('./sim_testing_images/straight.png')
+    ret, frame = cap.read()
+    # frame = cv.imread('./sim_testing_images/straight.png')
     if frame is None:
         break
 
