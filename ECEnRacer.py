@@ -29,6 +29,7 @@ import numpy as np
 import imutils
 import cv2
 from simple_pid import PID
+import time as tm
 
 enableDepth = True
 rs = RealSense("/dev/video2", RS_VGA, enableDepth)		# RS_VGA, RS_720P, or RS_1080P
@@ -55,13 +56,13 @@ def get_yellow_blob_x(bgr_img):
     Returns:
         float: x coordinate of the closest blob
     """
-    rgb_img = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2RGB)
-    # plt.imshow(rgb_img)
+    hsv_img = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
+    # plt.imshow(hsv_img)
     # plt.show()
     # Get grayscale image with only centerline (yellow colors)
-    lower_yellow = np.array([200,200,0])
-    upper_yellow = np.array([255,255,0])
-    centerline_gray_img = cv2.inRange(rgb_img, lower_yellow, upper_yellow) # get only yellow colors in image
+    lower_yellow = np.array([21,126,191])
+    upper_yellow = np.array([75,255,255])
+    centerline_gray_img = cv2.inRange(hsv_img, lower_yellow, upper_yellow) # get only yellow colors in image
 
     # Get Contours for center line blobs
     contours, hierarchy = cv2.findContours(centerline_gray_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -72,7 +73,7 @@ def get_yellow_blob_x(bgr_img):
         if M['m00'] != 0:
             cx = int(M['m10']/M['m00'])
             cy = int(M['m01']/M['m00'])
-            if cy > rgb_img.shape[0]//2:
+            if cy > hsv_img.shape[0]//2:
                 centers.append((cx, cy))
 
     centers.sort(key = lambda x: x[1])
@@ -86,9 +87,9 @@ def get_yellow_blob_x(bgr_img):
 def draw_centers(img, centers):
     # Draws given centers onto given image
     if len(centers) > 1 and centers != "None":
-        print(f"centers;: {centers}")
+        # print(f"centers;: {centers}")
         for point in centers:
-            cv2.circle(img, point, 15, (0, 0, 255), -1) 
+            cv2.circle(img, point, 7, (0, 0, 255), -1) 
             # args: img to draw on, point to draw, size of circle, color, line width (-1 defaults to fill)
 
 ################################ MAIN LOOP ################################
@@ -113,7 +114,8 @@ blob_lost = False
 draw_centers_bool = True
 centers = []
 
-Car.drive(speed)
+Car.drive(1.3)
+tm.sleep(.1)
 
 # You can use kd and kp commands to change KP and KD values.  Default values are good.
 # loop over frames from Realsense
