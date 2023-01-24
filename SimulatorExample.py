@@ -74,7 +74,7 @@ random.seed(seed)
 # can also pass a start location if you know the code: (y tile index, x tile index, position index, direction index)
 # - position index is from 0-(number of connections the tile has - 1), so a straight is 0 or 1, a t is 0, 1, or 2.
 # - direction index is 0 or 1 for normal or reversed.
-sim.start(mapSeed=seed, mapParameters=mapParameters, carParameters=carParameters, startPoint=(0,4,0,0))
+sim.start(mapSeed='real', mapParameters=mapParameters, carParameters=carParameters, startPoint=(0,4,0,0))
 
 car = sim.ackermann
 
@@ -119,9 +119,10 @@ def get_yellow_blob_x(bgr_img):
 
 def draw_centers(img, centers):
     # Draws given centers onto given image
-    for point in centers:
-        cv2.circle(img, point, 15, (0, 0, 255), -1) 
-        # args: img to draw on, point to draw, size of circle, color, line width (-1 defaults to fill)
+    if len(centers) > 1:
+        for point in centers:
+            cv2.circle(img, point, 15, (0, 0, 255), -1) 
+            # args: img to draw on, point to draw, size of circle, color, line width (-1 defaults to fill)
 
 ## SETUP PID Controller
 pid = PID()
@@ -131,7 +132,7 @@ pid.Kp = -30/350 #degrees per pixel
 frameUpdate = 1
 pid.sample_time = frameUpdate/30.0
 pid.output_limits = (-30,30)
-desXCoord = cameraSettings['resolution'][0]//4
+desXCoord = cameraSettings['resolution'][0]//3
 pid.setpoint = desXCoord
 
 i = 1
@@ -153,6 +154,9 @@ while(True):
     if i%frameUpdate == 0:
         i = 0
         centers = get_yellow_blob_x(img)
+        # if len(centers) > 4:
+        #     blobToFollowCoords = centers[-5]
+        # else:
         blobToFollowCoords = centers[-1]
         blobX = blobToFollowCoords[0]
 
