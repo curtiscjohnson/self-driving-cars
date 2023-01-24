@@ -52,10 +52,10 @@ cv2.namedWindow("car", cv2.WINDOW_NORMAL)
 
 # Can pass map parameters:
 mapParameters = {
-    "loops": 4,
-    "size": (10, 10),
-    "expansions": 40,
-    "complications": 5
+    "loops": 1,
+    "size": (6, 6),
+    "expansions": 5,
+    "complications": 4
 }
 
 # Can also pass car parameters for max/min speed, etc
@@ -74,7 +74,7 @@ random.seed(seed)
 # can also pass a start location if you know the code: (y tile index, x tile index, position index, direction index)
 # - position index is from 0-(number of connections the tile has - 1), so a straight is 0 or 1, a t is 0, 1, or 2.
 # - direction index is 0 or 1 for normal or reversed.
-sim.start(mapSeed="real", mapParameters=mapParameters, carParameters=carParameters, startPoint=(1,0,1,5))
+sim.start(mapSeed=seed, mapParameters=mapParameters, carParameters=carParameters, startPoint=(0,4,0,0))
 
 car = sim.ackermann
 
@@ -110,9 +110,13 @@ def get_yellow_blob_x(bgr_img):
                 centers.append((cx, cy))
 
     centers.sort(key = lambda x: x[1])
-    blobToFollowCoords = centers[-1]
 
-    return blobToFollowCoords[0]
+    # Make sure that their is a yellow blob found
+    if len(centers) == 0:
+        return "None"
+    else:
+        blobToFollowCoords = centers[-1]
+        return blobToFollowCoords[0]
 
 ## SETUP PID Controller
 pid = PID()
@@ -126,8 +130,11 @@ desXCoord = cameraSettings['resolution'][0]//4
 pid.setpoint = desXCoord
 
 i = 1
+angle = 0
+speed = 2
+blob_lost = False
 
-Arduino.setSpeed(1.2)
+Arduino.setSpeed(speed)
 
 while(True):
     img = realsense.getFrame() #time step entire simulation
@@ -141,13 +148,21 @@ while(True):
     statData = sim.getStats()
 
     #control loop
-    if i%frameUpdate==0:
-        i=0
+    if i%frameUpdate == 0:
+        i = 0
         blobX = get_yellow_blob_x(img)
-        angle = pid(blobX)
-        # print(f"commanded steering angle: {angle}")
+        if blobX == "None" and not blob_lost:
+            blob_lost = True
+            speed = 0.5
+            angle = -30.0 
+        elif blobX != "None" or not blob_lost:
+            blob_lost = False
+            speed = 3
+            angle = pid(blobX)
+
         Arduino.setSteering(angle)
-        
+        Arduino.setSpeed(speed)
+
     i+=1
 
     if (cv2.waitKey(1) == ord('q')): # this simulator waits for a keypress every frame because otherwise it'd be really hard to control I think.
