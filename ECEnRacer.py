@@ -16,7 +16,9 @@ From the Realsense camera:
 	KP(float p) : Proporation control 0 ~ 1.0 : how fast to reach the desired speed.
 	KD(float d) : How smoothly to reach the desired speed.
 
-    EXTREMELY IMPORTANT: Read the user manual carefully before operate the car
+	EXTREMELY IMPORTANT: Read the user manual carefully before operate the car
+
+	# If you get cannot get frame error: use 'sudo pkill -9 python3.6' and wait 15 seconds
 **************************************
 '''
 
@@ -37,30 +39,38 @@ Car = Arduino("/dev/ttyUSB0", 115200)                # Linux
 
 Car.zero(1440)      # Set car to go straight.  Change this for your car.
 Car.pid(1)          # Use PID control
+
+(time, rgb, depth, accel, gyro) = rs.getData(False)
+cv2.namedWindow('RGB', cv2.WINDOW_NORMAL)
+
 # You can use kd and kp commands to change KP and KD values.  Default values are good.
 # loop over frames from Realsense
 while True:
-    (time, rgb, depth, accel, gyro) = rs.getData(enableDepth)
+	(time, rgb, depth, accel, gyro) = rs.getData(False)
+	
+	cv2.imshow("RGB", rgb)
 
-    cv2.imshow("RGB", rgb)
-    cv2.imshow("Depth", depth)
+	if (cv2.waitKey(1) == ord('q')):
+		cv2.destroyAllWindows()
+		break
+#     cv2.imshow("Depth", depth)
 
-    '''
-    Add your code to process rgb, depth, IMU data
-    '''
+#     '''
+#     Add your code to process rgb, depth, IMU data
+#     '''
 
-    '''
-    Control the Car
-    '''
-    car.Steer
+#     '''
+#     Control the Car
+#     '''
+#     car.Steer
 
-    '''
-   	IMPORTANT: Never go full speed. Use CarTest.py to selest the best speed for you.
-    Car can switch between positve and negative speed (go reverse) without any problem.
-    '''
-    key = cv2.waitKey(1) & 0xFF
-    if key == ord("q"):
-        break
-del rs
-del Car
+#     '''
+#    	IMPORTANT: Never go full speed. Use CarTest.py to selest the best speed for you.
+#     Car can switch between positve and negative speed (go reverse) without any problem.
+#     '''
+#     key = cv2.waitKey(1) & 0xFF
+#     if key == ord("q"):
+#         break
+# del rs
+# del Car
 
