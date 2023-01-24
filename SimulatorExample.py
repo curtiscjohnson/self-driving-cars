@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 # Units are pixels for resolution, degrees for fov, degrees for angle, and pixels for height.
 cameraSettings = {
     "resolution": (1920, 1080),
-    "fov": {"diagonal": 94}, # realsense diagonal fov is 77 degrees IIRC
+    "fov": {"diagonal": 77}, # realsense diagonal fov is 77 degrees IIRC
     "angle": {"roll": 0, "pitch": 15, "yaw": 0}, # don't go too crazy with these, my code should be good up to like... 45 degrees probably? But the math gets unstable
     # "angle": {"roll": 13, "pitch": 30, "yaw": 30}, # don't go too crazy with these, my code should be good up to like... 45 degrees probably? But the math gets unstable
     "height": 66 # 8 pixels/inch - represents how high up the camera is relative to the road
@@ -115,8 +115,13 @@ def get_yellow_blob_x(bgr_img):
     if len(centers) == 0:
         return "None"
     else:
-        blobToFollowCoords = centers[-1]
-        return blobToFollowCoords[0]
+        return centers
+
+def draw_centers(img, centers):
+    # Draws given centers onto given image
+    for point in centers:
+        cv2.circle(img, point, 15, (0, 0, 255), -1) 
+        # args: img to draw on, point to draw, size of circle, color, line width (-1 defaults to fill)
 
 ## SETUP PID Controller
 pid = PID()
@@ -131,39 +136,49 @@ pid.setpoint = desXCoord
 
 i = 1
 angle = 0
-speed = 2
+FAST_SPEED = .8
+SLOW_SPEED = 0.5
+speed = FAST_SPEED
 blob_lost = False
+draw_centers_bool = True
+centers = []
 
 Arduino.setSpeed(speed)
 
 while(True):
     img = realsense.getFrame() #time step entire simulation
     carPlace = car.getCoord()
+
+    # control loop
+    if i%frameUpdate == 0:
+        i = 0
+        centers = get_yellow_blob_x(img)
+        blobToFollowCoords = centers[-1]
+        blobX = blobToFollowCoords[0]
+
+        if blobX == "None" and not blob_lost:
+            blob_lost = True
+            speed = SLOW_SPEED
+            angle = -30.0 
+        elif blobX != "None" or not blob_lost:
+            blob_lost = False
+            speed = FAST_SPEED
+            angle = pid(blobX)
+
+        Arduino.setSteering(angle)
+        Arduino.setSpeed(speed)
+    i+=1
+
+    # Display Code
     newImg = realsense.currentImg.copy()
     newImg = cv2.line(newImg, carPlace.asInt(), (carPlace + 100*coordinate.unitFromAngle(car.currentState.theta, isRadians = True)).asInt(), (0, 255, 0), 3)
     newImg = cv2.line(newImg, carPlace.asInt(), (carPlace + 100*coordinate.unitFromAngle(car.currentState.theta + car.currentState.delta + car.currentState.steeringOffset, isRadians = True)).asInt(), (0, 0, 255), 3)
     # cv2.imshow("map", realsense.currentImg)
     cv2.imshow("map", newImg)
+    if draw_centers_bool:
+        draw_centers(img, centers)
     cv2.imshow("car", img)
     statData = sim.getStats()
-
-    #control loop
-    if i%frameUpdate == 0:
-        i = 0
-        blobX = get_yellow_blob_x(img)
-        if blobX == "None" and not blob_lost:
-            blob_lost = True
-            speed = 0.5
-            angle = -30.0 
-        elif blobX != "None" or not blob_lost:
-            blob_lost = False
-            speed = 3
-            angle = pid(blobX)
-
-        Arduino.setSteering(angle)
-        Arduino.setSpeed(speed)
-
-    i+=1
 
     if (cv2.waitKey(1) == ord('q')): # this simulator waits for a keypress every frame because otherwise it'd be really hard to control I think.
         # You could probably implement arrow key control, but... I didn't.  So.
