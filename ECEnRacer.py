@@ -45,55 +45,6 @@ Car.pid(1)          # Use PID control
 (time, rgb, depth, accel, gyro) = rs.getData(False)
 cv2.namedWindow('RGB', cv2.WINDOW_NORMAL)
 
-################################ FUNCTIONS ################################
-
-def get_yellow_blob_x(bgr_img):
-    """gets x coord of centerline blob to follow
-
-    Args:
-        img (_type_): BGR image from realsense camera
-
-    Returns:
-        float: x coordinate of the closest blob
-    """
-    hsv_img = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
-    # plt.imshow(hsv_img)
-    # plt.show()
-    # Get grayscale image with only centerline (yellow colors)
-    lower_yellow = np.array([21,126,191])
-    upper_yellow = np.array([75,255,255])
-    centerline_gray_img = cv2.inRange(hsv_img, lower_yellow, upper_yellow) # get only yellow colors in image
-
-    # Get Contours for center line blobs
-    contours, hierarchy = cv2.findContours(centerline_gray_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-    centers = []
-    for i in contours:
-        M = cv2.moments(i)
-        if M['m00'] != 0:
-            cx = int(M['m10']/M['m00'])
-            cy = int(M['m01']/M['m00'])
-            if cy > hsv_img.shape[0]//2:
-                centers.append((cx, cy))
-
-    centers.sort(key = lambda x: x[1])
-
-    # Make sure that their is a yellow blob found
-    if len(centers) == 0:
-        return "None"
-    else:
-        return centers
-
-def draw_centers(img, centers):
-    # Draws given centers onto given image
-    if len(centers) > 1 and centers != "None":
-        # print(f"centers;: {centers}")
-        for point in centers:
-            cv2.circle(img, point, 7, (0, 0, 255), -1) 
-            # args: img to draw on, point to draw, size of circle, color, line width (-1 defaults to fill)
-
-################################ MAIN LOOP ################################
-
 ## SETUP PID Controller
 pid = PID()
 pid.Ki = -.01*0
@@ -132,8 +83,7 @@ while(True):
 
 		if centers == "None" and not blob_lost:
 			blob_lost = True
-			speed = SLOW_SPEED
-			angle = -30.0 
+			speed = 0
 		elif centers != "None" or not blob_lost:
 			blobToFollowCoords = centers[-1]
 			blobX = blobToFollowCoords[0]

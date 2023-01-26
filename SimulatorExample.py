@@ -10,6 +10,9 @@ from simple_pid import PID
 
 import matplotlib.pyplot as plt
 
+import lightning_mcqueen as lm
+import time
+
 # Can pass "cameraSettings" - see the camera.py file for options.
 # M and D matrices not currently used, D could be used for distortion but that would need to be implemented in camera.py - wouldn't be too bad to do
 # Units are pixels for resolution, degrees for fov, degrees for angle, and pixels for height.
@@ -47,8 +50,8 @@ realSteer = updateSteer(controlSteer)
 
 cv2.namedWindow("map", cv2.WINDOW_NORMAL)
 cv2.namedWindow("car", cv2.WINDOW_NORMAL)
-# cv2.createTrackbar("speed", "map", controlSpeed, speedUnits, updateSpeed)
-# cv2.createTrackbar("steer", "map", controlSteer, maxSteer * 2, updateSteer)
+cv2.createTrackbar("speed", "map", controlSpeed, speedUnits, updateSpeed)
+cv2.createTrackbar("steer", "map", controlSteer, maxSteer * 2, updateSteer)
 
 # Can pass map parameters:
 mapParameters = {
@@ -80,50 +83,6 @@ car = sim.ackermann
 
 # I get ~20ms per loop on my computer, so roughly 1.5x real-world speed at 30fps.
 
-def get_yellow_blob_x(bgr_img):
-    """gets x coord of centerline blob to follow
-
-    Args:
-        img (_type_): BGR image from realsense camera
-
-    Returns:
-        float: x coordinate of the closest blob
-    """
-    rgb_img = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2RGB)
-    # plt.imshow(rgb_img)
-    # plt.show()
-    # Get grayscale image with only centerline (yellow colors)
-    lower_yellow = np.array([240,240,0])
-    upper_yellow = np.array([255,255,0])
-    centerline_gray_img = cv2.inRange(rgb_img, lower_yellow, upper_yellow) # get only yellow colors in image
-
-    # Get Contours for center line blobs
-    contours, hierarchy = cv2.findContours(centerline_gray_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-    centers = []
-    for i in contours:
-        M = cv2.moments(i)
-        if M['m00'] != 0:
-            cx = int(M['m10']/M['m00'])
-            cy = int(M['m01']/M['m00'])
-            if cy > rgb_img.shape[0]//2:
-                centers.append((cx, cy))
-
-    centers.sort(key = lambda x: x[1])
-
-    # Make sure that their is a yellow blob found
-    if len(centers) == 0:
-        return "None"
-    else:
-        return centers
-
-def draw_centers(img, centers):
-    # Draws given centers onto given image
-    if len(centers) > 1:
-        for point in centers:
-            cv2.circle(img, point, 15, (0, 0, 255), -1) 
-            # args: img to draw on, point to draw, size of circle, color, line width (-1 defaults to fill)
-
 ## SETUP PID Controller
 pid = PID()
 pid.Ki = -.01*0
@@ -132,19 +91,18 @@ pid.Kp = -30/350 #degrees per pixel
 frameUpdate = 1
 pid.sample_time = frameUpdate/30.0
 pid.output_limits = (-30,30)
-desXCoord = cameraSettings['resolution'][0]//3
+desXCoord = cameraSettings['resolution'][0]//2
 pid.setpoint = desXCoord
 
 i = 1
 angle = 0
-FAST_SPEED = .8
-SLOW_SPEED = 0.5
-speed = FAST_SPEED
-blob_lost = False
-draw_centers_bool = True
+FAST_SPEED = 1.5
+draw_bool = True
 centers = []
 
-Arduino.setSpeed(speed)
+turning = False
+
+Arduino.setSpeed(FAST_SPEED)
 
 while(True):
     img = realsense.getFrame() #time step entire simulation
@@ -153,24 +111,32 @@ while(True):
     # control loop
     if i%frameUpdate == 0:
         i = 0
-        centers = get_yellow_blob_x(img)
-        # if len(centers) > 4:
-        #     blobToFollowCoords = centers[-5]
-        # else:
-        blobToFollowCoords = centers[-1]
-        blobX = blobToFollowCoords[0]
+        centers = lm.get_yellow_centers(img)
+        possible_turns = lm.identify_possible_turns(img.shape, centers)
 
-        if blobX == "None" and not blob_lost:
-            blob_lost = True
-            speed = SLOW_SPEED
-            angle = -30.0 
-        elif blobX != "None" or not blob_lost:
-            blob_lost = False
-            speed = FAST_SPEED
+        if len(possible_turns) > 0 and not turning:
+            turn = lm.pick_turn(possible_turns)
+            print(f"turning: {turn}")
+            # set angle
+            if turn == "right":
+                angle = 20
+            elif turn == "left":
+                angle = -20
+            else:
+                angle = 0
+
+            Arduino.setSteering(angle)
+            turning = True
+        elif len(possible_turns) == 0:
+            blobToFollowCoords = centers[-1]
+            blobX = blobToFollowCoords[0]
+
             angle = pid(blobX)
+            # print(f"angle: {angle}")
+            Arduino.setSteering(angle)
+            Arduino.setSpeed(FAST_SPEED) 
+            turning = False
 
-        Arduino.setSteering(angle)
-        Arduino.setSpeed(speed)
     i+=1
 
     # Display Code
@@ -179,8 +145,22 @@ while(True):
     newImg = cv2.line(newImg, carPlace.asInt(), (carPlace + 100*coordinate.unitFromAngle(car.currentState.theta + car.currentState.delta + car.currentState.steeringOffset, isRadians = True)).asInt(), (0, 0, 255), 3)
     # cv2.imshow("map", realsense.currentImg)
     cv2.imshow("map", newImg)
-    if draw_centers_bool:
-        draw_centers(img, centers)
+    if draw_bool:
+        lm.draw_centers(img, centers)
+
+        LEFT_X_THRESH = img.shape[1] // 4
+        RIGHT_X_THRESH = int(img.shape[1] *3/4)
+        Y_UPPER_THRESH = int(img.shape[0] *4.5/5)
+        Y_LOWER_THRESH = int(img.shape[0] *3/5)
+
+        # horizontal band
+        img = cv2.line(img, (0, Y_LOWER_THRESH), (img.shape[1],Y_LOWER_THRESH), (0,255,0), thickness=5)
+        img = cv2.line(img, (0, Y_UPPER_THRESH), (img.shape[1],Y_UPPER_THRESH), (0,255,0), thickness=5)
+
+        # left and right
+        img = cv2.line(img, (LEFT_X_THRESH, 0), (LEFT_X_THRESH,img.shape[0]), (0,255,0), thickness=5)
+        img = cv2.line(img, (RIGHT_X_THRESH, 0), (RIGHT_X_THRESH,img.shape[0]), (0,255,0), thickness=5)
+
     cv2.imshow("car", img)
     statData = sim.getStats()
 
