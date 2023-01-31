@@ -30,6 +30,7 @@ import imutils
 import cv2
 from simple_pid import PID
 import time as tm
+import lightning_mcqueen as lm
 
 enableDepth = True
 rs = RealSense("/dev/video2", RS_VGA, enableDepth)		# RS_VGA, RS_720P, or RS_1080P
@@ -62,7 +63,7 @@ FAST_SPEED = .8
 SLOW_SPEED = 0.5
 speed = FAST_SPEED
 blob_lost = False
-draw_centers_bool = True
+draw_bool = True
 centers = []
 
 Car.drive(1.3)
@@ -72,34 +73,57 @@ tm.sleep(.1)
 # loop over frames from Realsense
 while(True):
 	(time, rgb, depth, accel, gyro) = rs.getData(False)
+	img = rgb
 
 	# control loop
 	if i%frameUpdate == 0:
 		i = 0
-		centers = get_yellow_blob_x(rgb)
-		# if len(centers) > 4:
-		#     blobToFollowCoords = centers[-5]
-		# else:
+		centers = lm.get_yellow_centers(img)
+		possible_turns = lm.identify_possible_turns(img.shape, centers)
 
-		if centers == "None" and not blob_lost:
-			blob_lost = True
-			speed = 0
-		elif centers != "None" or not blob_lost:
+		if len(possible_turns) > 0 and not turning:
+			turn = lm.pick_turn(possible_turns)
+			print(f"turning: {turn}")
+			# set angle
+			if turn == "right":
+				angle = 20
+			elif turn == "left":
+				angle = -20
+			else:
+				angle = 0
+
+			Arduino.setSteering(angle)
+			turning = True
+		elif len(possible_turns) == 0:
 			blobToFollowCoords = centers[-1]
 			blobX = blobToFollowCoords[0]
 
-			blob_lost = False
-			speed = FAST_SPEED
 			angle = pid(blobX)
+			# print(f"angle: {angle}")
+			Arduino.setSteering(angle)
+			Arduino.setSpeed(FAST_SPEED) 
+			turning = False
 
-		Car.steer(angle)
-		Car.drive(speed)
 	i+=1
 
-	if draw_centers_bool:
-		draw_centers(rgb, centers)
-	
-	cv2.imshow("RGB", rgb)
+	# Display Code
+	if draw_bool:
+		lm.draw_centers(img, centers)
+
+		LEFT_X_THRESH = img.shape[1] // 4
+		RIGHT_X_THRESH = int(img.shape[1] *3/4)
+		Y_UPPER_THRESH = int(img.shape[0] *4.5/5)
+		Y_LOWER_THRESH = int(img.shape[0] *3/5)
+
+		# horizontal band
+		img = cv2.line(img, (0, Y_LOWER_THRESH), (img.shape[1],Y_LOWER_THRESH), (0,255,0), thickness=5)
+		img = cv2.line(img, (0, Y_UPPER_THRESH), (img.shape[1],Y_UPPER_THRESH), (0,255,0), thickness=5)
+
+		# left and right
+		img = cv2.line(img, (LEFT_X_THRESH, 0), (LEFT_X_THRESH,img.shape[0]), (0,255,0), thickness=5)
+		img = cv2.line(img, (RIGHT_X_THRESH, 0), (RIGHT_X_THRESH,img.shape[0]), (0,255,0), thickness=5)
+
+	cv2.imshow("car", img)
 
 	if (cv2.waitKey(1) == ord('q')):
 		cv2.destroyAllWindows()
