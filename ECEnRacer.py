@@ -43,7 +43,7 @@ Car = Arduino("/dev/ttyUSB0", 115200)                # Linux
 Car.zero(1440)      # Set car to go straight.  Change this for your car.
 Car.pid(1)          # Use PID control
 
-(time, rgb, depth, accel, gyro) = rs.getData(False)
+(time_, rgb, depth, accel, gyro) = rs.getData(False)
 cv2.namedWindow('RGB', cv2.WINDOW_NORMAL)
 
 ## SETUP PID Controller
@@ -63,57 +63,62 @@ FAST_SPEED = .8
 SLOW_SPEED = 0.5
 speed = FAST_SPEED
 blob_lost = False
-draw_bool = True
+draw_bool = False
 centers = []
 
 Car.drive(1.3)
 tm.sleep(.1)
+Arduino.setSpeed(FAST_SPEED) 
+
 
 # You can use kd and kp commands to change KP and KD values.  Default values are good.
 # loop over frames from Realsense
 while(True):
-	(time, rgb, depth, accel, gyro) = rs.getData(False)
-	img = rgb
+	(time_, img, depth, accel, gyro) = rs.getData(False)
 
 	# control loop
 	if i%frameUpdate == 0:
 		i = 0
 		centers = lm.get_yellow_centers(img)
-		possible_turns = lm.identify_possible_turns(img.shape, centers)
 
-		if len(possible_turns) > 0 and not turning:
-			turn = lm.pick_turn(possible_turns)
-			print(f"turning: {turn}")
-			# set angle
-			if turn == "right":
-				angle = 20
-			elif turn == "left":
-				angle = -20
-			else:
-				angle = 0
-
-			Arduino.setSteering(angle)
-			turning = True
-		elif len(possible_turns) == 0:
+		if centers != "None":
 			blobToFollowCoords = centers[-1]
 			blobX = blobToFollowCoords[0]
-
 			angle = pid(blobX)
 			# print(f"angle: {angle}")
 			Arduino.setSteering(angle)
-			Arduino.setSpeed(FAST_SPEED) 
-			turning = False
 
-	i+=1
+
+		# possible_turns, THRESHOLDS = lm.identify_possible_turns(img.shape, centers)
+
+		# if len(possible_turns) > 0 and not turning:
+		# 	turn = lm.pick_turn(possible_turns)
+		# 	print(f"turning: {turn}")
+		# 	# set angle
+		# 	if turn == "right":
+		# 		angle = 20
+		# 	elif turn == "left":
+		# 		angle = -20
+		# 	else:
+		# 		angle = 0
+
+		# 	Arduino.setSteering(angle)
+		# 	turning = True
+		# elif len(possible_turns) == 0:
+		# 	blobToFollowCoords = centers[-1]
+		# 	blobX = blobToFollowCoords[0]
+
+		# 	angle = pid(blobX)
+		# 	# print(f"angle: {angle}")
+		# 	Arduino.setSteering(angle)
+		# 	Arduino.setSpeed(FAST_SPEED) 
+		# 	turning = False
 
 	# Display Code
 	if draw_bool:
 		lm.draw_centers(img, centers)
 
-		LEFT_X_THRESH = img.shape[1] // 4
-		RIGHT_X_THRESH = int(img.shape[1] *3/4)
-		Y_UPPER_THRESH = int(img.shape[0] *4.5/5)
-		Y_LOWER_THRESH = int(img.shape[0] *3/5)
+		LEFT_X_THRESH, RIGHT_X_THRESH, Y_UPPER_THRESH, Y_LOWER_THRESH = THRESHOLDS
 
 		# horizontal band
 		img = cv2.line(img, (0, Y_LOWER_THRESH), (img.shape[1],Y_LOWER_THRESH), (0,255,0), thickness=5)
@@ -125,6 +130,7 @@ while(True):
 
 	cv2.imshow("car", img)
 
+	i+=1
 	if (cv2.waitKey(1) == ord('q')):
 		cv2.destroyAllWindows()
 		break

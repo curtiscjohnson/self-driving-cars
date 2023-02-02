@@ -11,7 +11,9 @@ from simple_pid import PID
 import matplotlib.pyplot as plt
 
 import lightning_mcqueen as lm
+import detect_lane as dl
 import time
+import collections
 
 # Can pass "cameraSettings" - see the camera.py file for options.
 # M and D matrices not currently used, D could be used for distortion but that would need to be implemented in camera.py - wouldn't be too bad to do
@@ -19,7 +21,7 @@ import time
 cameraSettings = {
     "resolution": (1920, 1080),
     "fov": {"diagonal": 77}, # realsense diagonal fov is 77 degrees IIRC
-    "angle": {"roll": 0, "pitch": 15, "yaw": 0}, # don't go too crazy with these, my code should be good up to like... 45 degrees probably? But the math gets unstable
+    "angle": {"roll": 0, "pitch": 0, "yaw": 0}, # don't go too crazy with these, my code should be good up to like... 45 degrees probably? But the math gets unstable
     # "angle": {"roll": 13, "pitch": 30, "yaw": 30}, # don't go too crazy with these, my code should be good up to like... 45 degrees probably? But the math gets unstable
     "height": 66 # 8 pixels/inch - represents how high up the camera is relative to the road
 }
@@ -77,7 +79,7 @@ random.seed(seed)
 # can also pass a start location if you know the code: (y tile index, x tile index, position index, direction index)
 # - position index is from 0-(number of connections the tile has - 1), so a straight is 0 or 1, a t is 0, 1, or 2.
 # - direction index is 0 or 1 for normal or reversed.
-sim.start(mapSeed='real', mapParameters=mapParameters, carParameters=carParameters, startPoint=(0,4,0,0))
+sim.start(mapSeed='real', mapParameters=mapParameters, carParameters=carParameters, startPoint=(5,0,0,1))
 
 car = sim.ackermann
 
@@ -87,7 +89,7 @@ car = sim.ackermann
 pid = PID()
 pid.Ki = -.01*0
 pid.Kd = -.01*0
-pid.Kp = -30/350 #degrees per pixel
+pid.Kp = -30/300 #degrees per pixel
 frameUpdate = 1
 pid.sample_time = frameUpdate/30.0
 pid.output_limits = (-30,30)
@@ -96,11 +98,13 @@ pid.setpoint = desXCoord
 
 i = 1
 angle = 0
-FAST_SPEED = 1.5
+FAST_SPEED = 0.7
 draw_bool = True
 centers = []
 
 turning = False
+BUFFER_LENGTH = 1
+buffer = collections.deque(BUFFER_LENGTH*[0], BUFFER_LENGTH)
 
 Arduino.setSpeed(FAST_SPEED)
 
@@ -108,34 +112,59 @@ while(True):
     img = realsense.getFrame() #time step entire simulation
     carPlace = car.getCoord()
 
-    # control loop
+    # # control loop
     if i%frameUpdate == 0:
+        # load the original input image and display it to our screen
+        # cv2.imshow("Original", img)
+        # a mask is the same size as our image, but has only two pixel
+        # values, 0 and 255 -- pixels with a value of 0 (background) are
+        # ignored in the original image while mask pixels with a value of
+        # 255 (foreground) are allowed to be kept
+        mask = np.ones(img.shape[:2], dtype="uint8")*255
+        cv2.rectangle(mask, (0, int(img.shape[0]*4/5)), img.shape[:2][::-1], 0, -1)
+        # cv2.imshow("Rectangular Mask", mask)
+        # apply our mask -- notice how only the person in the image is
+        # cropped out
+        masked = cv2.bitwise_and(img, img, mask=mask)
+        # cv2.imshow("Mask Applied to Image", masked)
         i = 0
-        centers = lm.get_yellow_centers(img)
-        possible_turns = lm.identify_possible_turns(img.shape, centers)
 
-        if len(possible_turns) > 0 and not turning:
-            turn = lm.pick_turn(possible_turns)
-            print(f"turning: {turn}")
-            # set angle
-            if turn == "right":
-                angle = 20
-            elif turn == "left":
-                angle = -20
-            else:
-                angle = 0
+        # centers = lm.get_yellow_centers(masked)
+        centers = lm.get_yellow_centers(masked)
 
-            Arduino.setSteering(angle)
-            turning = True
-        elif len(possible_turns) == 0:
-            blobToFollowCoords = centers[-1]
-            blobX = blobToFollowCoords[0]
 
-            angle = pid(blobX)
-            # print(f"angle: {angle}")
-            Arduino.setSteering(angle)
-            Arduino.setSpeed(FAST_SPEED) 
-            turning = False
+        # possible_turns = lm.identify_possible_turns(img.shape, centers)
+
+    #     # if len(possible_turns) > 0 and not turning:
+    #     #     turn = lm.pick_turn(possible_turns)
+    #     #     print(f"turning: {turn}")
+    #     #     # set angle
+    #     #     if turn == "right":
+    #     #         angle = 20
+    #     #     elif turn == "left":
+    #     #         angle = -20
+    #     #     else:
+    #     #         angle = 0
+
+    #     # Arduino.setSteering(angle)
+    #     #     turning = True
+    #     # elif len(possible_turns) == 0:
+
+
+        if centers != "None":
+            buffer.append(centers[-1][0])
+            blobX = buffer[0]
+            # blobX = lm.get_buffer_avg(buffer)
+
+        # else:
+        #     blobX = buffer[-1]
+
+        angle = pid(blobX)
+    #     #     # print(f"angle: {angle}")
+        Arduino.setSteering(angle)
+        #     #     Arduino.setSpeed(FAST_SPEED) 
+        #     #     turning = False
+        cv2.imshow("car", masked)
 
     i+=1
 
@@ -145,24 +174,23 @@ while(True):
     newImg = cv2.line(newImg, carPlace.asInt(), (carPlace + 100*coordinate.unitFromAngle(car.currentState.theta + car.currentState.delta + car.currentState.steeringOffset, isRadians = True)).asInt(), (0, 0, 255), 3)
     # cv2.imshow("map", realsense.currentImg)
     cv2.imshow("map", newImg)
-    if draw_bool:
-        lm.draw_centers(img, centers)
+    # # if draw_bool:
+    #     # lm.draw_centers(img, centers)
 
-        LEFT_X_THRESH = img.shape[1] // 4
-        RIGHT_X_THRESH = int(img.shape[1] *3/4)
-        Y_UPPER_THRESH = int(img.shape[0] *4.5/5)
-        Y_LOWER_THRESH = int(img.shape[0] *3/5)
+    #     # LEFT_X_THRESH = img.shape[1] // 4
+    #     # RIGHT_X_THRESH = int(img.shape[1] *3/4)
+    #     # Y_UPPER_THRESH = int(img.shape[0] *4.5/5)
+    #     # Y_LOWER_THRESH = int(img.shape[0] *3/5)
 
-        # horizontal band
-        img = cv2.line(img, (0, Y_LOWER_THRESH), (img.shape[1],Y_LOWER_THRESH), (0,255,0), thickness=5)
-        img = cv2.line(img, (0, Y_UPPER_THRESH), (img.shape[1],Y_UPPER_THRESH), (0,255,0), thickness=5)
+    #     # # horizontal band
+    #     # img = cv2.line(img, (0, Y_LOWER_THRESH), (img.shape[1],Y_LOWER_THRESH), (0,255,0), thickness=5)
+    #     # img = cv2.line(img, (0, Y_UPPER_THRESH), (img.shape[1],Y_UPPER_THRESH), (0,255,0), thickness=5)
 
-        # left and right
-        img = cv2.line(img, (LEFT_X_THRESH, 0), (LEFT_X_THRESH,img.shape[0]), (0,255,0), thickness=5)
-        img = cv2.line(img, (RIGHT_X_THRESH, 0), (RIGHT_X_THRESH,img.shape[0]), (0,255,0), thickness=5)
+    #     # # left and right
+    #     # img = cv2.line(img, (LEFT_X_THRESH, 0), (LEFT_X_THRESH,img.shape[0]), (0,255,0), thickness=5)
+    #     # img = cv2.line(img, (RIGHT_X_THRESH, 0), (RIGHT_X_THRESH,img.shape[0]), (0,255,0), thickness=5)
 
-    cv2.imshow("car", img)
-    statData = sim.getStats()
+    # statData = sim.getStats()
 
     if (cv2.waitKey(1) == ord('q')): # this simulator waits for a keypress every frame because otherwise it'd be really hard to control I think.
         # You could probably implement arrow key control, but... I didn't.  So.

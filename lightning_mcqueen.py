@@ -68,10 +68,14 @@ def identify_possible_turns(shape, centers):
         if center[0] > RIGHT_X_THRESH and center[1] < Y_UPPER_THRESH and center[1] > Y_LOWER_THRESH:
             turns.add("right")
     
-    return turns
+    return turns, [LEFT_X_THRESH, RIGHT_X_THRESH, Y_UPPER_THRESH, Y_LOWER_THRESH]
 
 def pick_turn(turns):
     if len(turns) == 1:
         turns.add("straight")
 
     return random.choice(list(turns))
+
+def get_buffer_avg(x_values):
+
+    return np.average(x_values, weights=[0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.075, 0.075, 0.05, 0.05])
