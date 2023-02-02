@@ -70,7 +70,7 @@ parser.add_argument('--camera', help='Camera divide number.', default=0, type=in
 args = parser.parse_args()
 
 ## [cap]
-cap = cv.VideoCapture("/dev/video2")
+cap = cv.VideoCapture("/dev/video5")
 ## [cap]
 
 ## [window]

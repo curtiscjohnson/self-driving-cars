@@ -44,7 +44,7 @@ Car.zero(1440)      # Set car to go straight.  Change this for your car.
 Car.pid(1)          # Use PID control
 
 (time_, rgb, depth, accel, gyro) = rs.getData(False)
-cv2.namedWindow('RGB', cv2.WINDOW_NORMAL)
+# cv2.namedWindow('RGB', cv2.WINDOW_NORMAL)
 
 ## SETUP PID Controller
 pid = PID()
@@ -54,26 +54,24 @@ pid.Kp = -30/350 #degrees per pixel
 frameUpdate = 1
 pid.sample_time = frameUpdate/30.0
 pid.output_limits = (-30,30)
-desXCoord = rgb.shape[0]//3
+desXCoord = rgb.shape[0]*3/5
 pid.setpoint = desXCoord
 
 i = 1
 angle = 0
-FAST_SPEED = .8
+FAST_SPEED = 1.0
 SLOW_SPEED = 0.5
 speed = FAST_SPEED
 blob_lost = False
-draw_bool = False
+draw_bool = True
 centers = []
 
-Car.drive(1.3)
-tm.sleep(.1)
-Arduino.setSpeed(FAST_SPEED) 
 
-
-# You can use kd and kp commands to change KP and KD values.  Default values are good.
-# loop over frames from Realsense
+# # You can use kd and kp commands to change KP and KD values.  Default values are good.
+# # loop over frames from Realsense
 while(True):
+	Car.drive(FAST_SPEED)
+# 	print("loop")
 	(time_, img, depth, accel, gyro) = rs.getData(False)
 
 	# control loop
@@ -86,7 +84,7 @@ while(True):
 			blobX = blobToFollowCoords[0]
 			angle = pid(blobX)
 			# print(f"angle: {angle}")
-			Arduino.setSteering(angle)
+			Car.steer(angle)
 
 
 		# possible_turns, THRESHOLDS = lm.identify_possible_turns(img.shape, centers)
@@ -118,15 +116,15 @@ while(True):
 	if draw_bool:
 		lm.draw_centers(img, centers)
 
-		LEFT_X_THRESH, RIGHT_X_THRESH, Y_UPPER_THRESH, Y_LOWER_THRESH = THRESHOLDS
+		# LEFT_X_THRESH, RIGHT_X_THRESH, Y_UPPER_THRESH, Y_LOWER_THRESH = THRESHOLDS
 
 		# horizontal band
-		img = cv2.line(img, (0, Y_LOWER_THRESH), (img.shape[1],Y_LOWER_THRESH), (0,255,0), thickness=5)
-		img = cv2.line(img, (0, Y_UPPER_THRESH), (img.shape[1],Y_UPPER_THRESH), (0,255,0), thickness=5)
+		# img = cv2.line(img, (0, Y_LOWER_THRESH), (img.shape[1],Y_LOWER_THRESH), (0,255,0), thickness=5)
+		# img = cv2.line(img, (0, Y_UPPER_THRESH), (img.shape[1],Y_UPPER_THRESH), (0,255,0), thickness=5)
 
 		# left and right
-		img = cv2.line(img, (LEFT_X_THRESH, 0), (LEFT_X_THRESH,img.shape[0]), (0,255,0), thickness=5)
-		img = cv2.line(img, (RIGHT_X_THRESH, 0), (RIGHT_X_THRESH,img.shape[0]), (0,255,0), thickness=5)
+		# img = cv2.line(img, (LEFT_X_THRESH, 0), (LEFT_X_THRESH,img.shape[0]), (0,255,0), thickness=5)
+		# img = cv2.line(img, (RIGHT_X_THRESH, 0), (RIGHT_X_THRESH,img.shape[0]), (0,255,0), thickness=5)
 
 	cv2.imshow("car", img)
 
