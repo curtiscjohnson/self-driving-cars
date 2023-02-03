@@ -107,8 +107,8 @@ def get_white_lane_lines(image):
     # filter for blue lane lines
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     # show_image("img", hsv)
-    lower_white = np.array([0,0,200])
-    upper_white = np.array([255,55,255])
+    lower_white = np.array([0,0,155])
+    upper_white = np.array([113,255,205])
     mask = cv2.inRange(hsv, lower_white, upper_white)
 
     return mask

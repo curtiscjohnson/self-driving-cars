@@ -31,6 +31,7 @@ import cv2
 from simple_pid import PID
 import time as tm
 import lightning_mcqueen as lm
+import detect_lane as dl
 
 enableDepth = True
 rs = RealSense("/dev/video2", RS_VGA, enableDepth)		# RS_VGA, RS_720P, or RS_1080P
@@ -50,7 +51,7 @@ Car.pid(1)          # Use PID control
 pid = PID()
 pid.Ki = -.01*0
 pid.Kd = -.01*0
-pid.Kp = -30/350 #degrees per pixel
+pid.Kp = -30/250 #degrees per pixel
 frameUpdate = 1
 pid.sample_time = frameUpdate/30.0
 pid.output_limits = (-30,30)
@@ -59,7 +60,7 @@ pid.setpoint = desXCoord
 
 i = 1
 angle = 0
-FAST_SPEED = 1.0
+FAST_SPEED = 1.3
 SLOW_SPEED = 0.5
 speed = FAST_SPEED
 blob_lost = False
@@ -77,6 +78,10 @@ while(True):
 	# control loop
 	if i%frameUpdate == 0:
 		i = 0
+
+		# masked_img = dl.get_road(img)
+        # cv2.imshow("Mask Applied to Image", masked)
+        # centers = lm.get_yellow_centers(masked)
 		centers = lm.get_yellow_centers(img)
 
 		if centers != "None":
@@ -85,7 +90,6 @@ while(True):
 			angle = pid(blobX)
 			# print(f"angle: {angle}")
 			Car.steer(angle)
-
 
 		# possible_turns, THRESHOLDS = lm.identify_possible_turns(img.shape, centers)
 
@@ -125,6 +129,10 @@ while(True):
 		# left and right
 		# img = cv2.line(img, (LEFT_X_THRESH, 0), (LEFT_X_THRESH,img.shape[0]), (0,255,0), thickness=5)
 		# img = cv2.line(img, (RIGHT_X_THRESH, 0), (RIGHT_X_THRESH,img.shape[0]), (0,255,0), thickness=5)
+
+		# Goal Coordinate
+		# img = cv2.line(img, (desXCoord, 0), (desXCoord , img.shape[0]), (0,255,0), thickness=5)
+
 
 	cv2.imshow("car", img)
 
