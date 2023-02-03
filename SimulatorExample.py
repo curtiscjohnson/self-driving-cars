@@ -120,18 +120,12 @@ while(True):
         # values, 0 and 255 -- pixels with a value of 0 (background) are
         # ignored in the original image while mask pixels with a value of
         # 255 (foreground) are allowed to be kept
-        mask = np.ones(img.shape[:2], dtype="uint8")*255
-        cv2.rectangle(mask, (0, int(img.shape[0]*4/5)), img.shape[:2][::-1], 0, -1)
-        # cv2.imshow("Rectangular Mask", mask)
-        # apply our mask -- notice how only the person in the image is
-        # cropped out
-        masked = cv2.bitwise_and(img, img, mask=mask)
+
+        masked_img = dl.get_road(img)
         # cv2.imshow("Mask Applied to Image", masked)
-        i = 0
-
         # centers = lm.get_yellow_centers(masked)
-        centers = lm.get_yellow_centers(masked)
-
+        centers = lm.get_yellow_centers(masked_img)
+        i = 0
 
         # possible_turns = lm.identify_possible_turns(img.shape, centers)
 
@@ -164,7 +158,7 @@ while(True):
         Arduino.setSteering(angle)
         #     #     Arduino.setSpeed(FAST_SPEED) 
         #     #     turning = False
-        cv2.imshow("car", masked)
+        cv2.imshow("car", masked_img)
 
     i+=1
 
