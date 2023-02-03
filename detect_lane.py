@@ -144,3 +144,42 @@ def detect_lanes(img):
 #     plt.imshow(img)
 #     lanes = detect_lanes(img)
 #     print(f"LANES: {lanes}")
+
+def get_road(img):
+    lanes = detect_lanes(img)
+
+    width = img.shape[1]
+    height = img.shape[0]
+
+    polygon = np.array([[
+        (0, height * 2/3),
+        (width, height * 2/3),
+        (width, height),
+        (0, height),
+    ]], np.int32)
+    # print(f"shape: {polygon.shape}")
+    # pt1 ------------- pt2
+    #  |                 |
+    #  |                 |
+    # pt4 ------------- pt3
+
+    for side, points in lanes.items():
+        if side == "left":
+            polygon[0, 0, :] = points[-2:]
+            polygon[0, 3, :] = points[:2]
+        elif side == "right":
+            polygon[0, 1, :] = points[-2:]
+            polygon[0, 2, :] = points[:2]
+
+    #create a mask (triangle that isolates the region of interest in our image)
+    mask = np.zeros(img.shape, dtype="uint8")*255
+    mask = cv2.fillPoly(mask, polygon, color=(255, 255, 255))
+
+    # print(f"mask shape: {mask.shape}")
+    # print(f"img shape: {img.shape}")
+    masked_img = cv2.bitwise_and(img, mask)
+
+    # masked = cv2.addWeighted(masked, 1, img, 1, 0)
+    # cv2.imshow("FINAL VIEW", masked_img)
+
+    return masked_img
