@@ -15,12 +15,13 @@ def get_yellow_centers(bgr_img):
     hsv_img = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
 
     # Get grayscale image with only centerline (yellow colors)
-    lower_yellow = np.array([21,126,191])
-    upper_yellow = np.array([75,255,255])
+    lower_yellow = np.array([14,116,147])
+    upper_yellow = np.array([100,255,255])
     centerline_gray_img = cv2.inRange(hsv_img, lower_yellow, upper_yellow) # get only yellow colors in image
+    blurred = cv2.GaussianBlur(centerline_gray_img, (5,5),0)
 
     # Get Contours for center line blobs
-    contours, hierarchy = cv2.findContours(centerline_gray_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(blurred, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     centers = []
     for i in contours:
@@ -28,7 +29,7 @@ def get_yellow_centers(bgr_img):
         if M['m00'] != 0:
             cx = int(M['m10']/M['m00'])
             cy = int(M['m01']/M['m00'])
-            if cy > hsv_img.shape[0]//3:
+            if cy > hsv_img.shape[0]*3.5/5: #where to look for centers
                 centers.append((cx, cy))
 
     centers.sort(key = lambda x: x[1])
@@ -68,10 +69,14 @@ def identify_possible_turns(shape, centers):
         if center[0] > RIGHT_X_THRESH and center[1] < Y_UPPER_THRESH and center[1] > Y_LOWER_THRESH:
             turns.add("right")
     
-    return turns
+    return turns, [LEFT_X_THRESH, RIGHT_X_THRESH, Y_UPPER_THRESH, Y_LOWER_THRESH]
 
 def pick_turn(turns):
     if len(turns) == 1:
         turns.add("straight")
 
     return random.choice(list(turns))
+
+def get_buffer_avg(x_values):
+
+    return np.average(x_values, weights=[0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.075, 0.075, 0.05, 0.05])

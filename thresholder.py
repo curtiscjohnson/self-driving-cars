@@ -70,7 +70,7 @@ parser.add_argument('--camera', help='Camera divide number.', default=0, type=in
 args = parser.parse_args()
 
 ## [cap]
-cap = cv.VideoCapture("/dev/video2")
+cap = cv.VideoCapture("/dev/video5")
 ## [cap]
 
 ## [window]
@@ -96,11 +96,12 @@ while True:
 
     frame_HSV = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
     frame_threshold = cv.inRange(frame_HSV, (low_H, low_S, low_V), (high_H, high_S, high_V))
+    blurred = cv.GaussianBlur(frame_threshold, (5,5),0)
     ## [while]
 
     ## [show]
     cv.imshow(window_capture_name, frame)
-    cv.imshow(window_detection_name, frame_threshold)
+    cv.imshow(window_detection_name, blurred)
     ## [show]
 
     key = cv.waitKey(30)
