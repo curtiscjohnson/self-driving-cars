@@ -101,8 +101,20 @@ class Simulator:
         self.Arduino.setSpeed(speed)
         self.Arduino.setSteering(steer)
         frame = self.RealSense.getFrame()
-        reward = self.getReward() 
-        done = reward!=1.0
+        distToCenter, bearingOffset = self.getStats()
+
+        done = False
+        if bearingOffset < 0.2:
+            if bearingOffset == 0:
+                reward = 1.0
+            else:
+                reward = np.minimum(1.0, .1/bearingOffset)
+        else:
+            reward = -1.0
+
+        if distToCenter > 60:
+            done = True
+
         if display:
             if not self.windowsMade:
                 cv2.namedWindow("map", cv2.WINDOW_NORMAL)
@@ -121,12 +133,14 @@ class Simulator:
             cv2.waitKey(1)
         return frame,reward,done
 
-    def getReward(self):
-        # return negative reward if crashed positive reward if doing
-        distToCenter, bearingOffset = self.getStats()
+    # def getReward(self):
+    #     # return negative reward if crashed positive reward if doing
+    #     distToCenter, bearingOffset = self.getStats()
+    #     reward = 0.0
+    #     bearing_thresh = 0.2
 
-        threshold=40 #experimentally determined
-        if distToCenter < threshold:
-            return 1.0
-        else:
-            return 0.0
+    #     # threshold=40 #experimentally determined
+    #     if bearingOffset < bearing_thresh:
+    #         return np.minimum(1, .1/bearingOffset)
+        
+    #     return 0
