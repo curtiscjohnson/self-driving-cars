@@ -103,16 +103,11 @@ class Simulator:
         frame = self.RealSense.getFrame()
         distToCenter, bearingOffset = self.getStats()
 
+        reward = 0.0
         done = False
-        if bearingOffset < 0.2:
-            if bearingOffset == 0:
-                reward = 1.0
-            else:
-                reward = np.minimum(1.0, .1/bearingOffset)
+        if bearingOffset < 1 and distToCenter < 60:
+            reward = 1.0
         else:
-            reward = -1.0
-
-        if distToCenter > 60:
             done = True
 
         if display:

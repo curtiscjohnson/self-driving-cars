@@ -106,7 +106,7 @@ turning = False
 BUFFER_LENGTH = 1
 buffer = collections.deque(BUFFER_LENGTH*[0], BUFFER_LENGTH)
 
-Arduino.setSpeed(FAST_SPEED)
+Arduino.setSpeed(0.0)
 
 while(True):
     img = realsense.getFrame() #time step entire simulation
@@ -120,6 +120,7 @@ while(True):
         # values, 0 and 255 -- pixels with a value of 0 (background) are
         # ignored in the original image while mask pixels with a value of
         # 255 (foreground) are allowed to be kept
+        print(sim.getStats())
 
         masked_img = dl.get_road(img)
         # cv2.imshow("Mask Applied to Image", masked)
@@ -153,9 +154,9 @@ while(True):
         # else:
         #     blobX = buffer[-1]
 
-        angle = pid(blobX)
+        # angle = pid(blobX)
     #     #     # print(f"angle: {angle}")
-        Arduino.setSteering(angle)
+        # Arduino.setSteering(angle)
         #     #     Arduino.setSpeed(FAST_SPEED) 
         #     #     turning = False
         cv2.imshow("car", masked_img)
