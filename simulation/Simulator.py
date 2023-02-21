@@ -96,7 +96,7 @@ class Simulator:
         distanceToCenter, bearingOffset = self.RealSense.currentMap.getStatistics(carPosition, carBearing)
         return distanceToCenter, bearingOffset
 
-    def step(self,steer,speed,display=False):
+    def step(self,steer,speed,display=False,validate=False):
         #for network training to step the simulation with steering and speed as input
         self.Arduino.setSpeed(speed)
         self.Arduino.setSteering(steer)
@@ -105,9 +105,9 @@ class Simulator:
 
         reward = 0.0
         done = False
-        if bearingOffset < 1 and distToCenter < 60:
+        if bearingOffset < 10 and distToCenter < 60:
             reward = 1.0
-        else:
+        elif not validate:
             done = True
 
         if display:
