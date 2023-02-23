@@ -172,12 +172,13 @@ class Tile:
 
             # Now we loop through these to see which one is best in distance, and we'll use that angle as well.
             bestDist = np.inf
-            bestAngle = 0
+            bestAngle = np.inf
 
             for option in options:
                 dist, angle = option
                 if (dist < bestDist):
                     bestDist = dist
+                if (angle < bestAngle):
                     bestAngle = angle
             
             return bestDist, bestAngle

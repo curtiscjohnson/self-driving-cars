@@ -105,10 +105,13 @@ class Simulator:
 
         reward = 0.0
         done = False
-        if bearingOffset < 10 and distToCenter < 60:
+        if bearingOffset < 0.25 and distToCenter < 45:
             reward = 1.0
-        elif not validate:
+        else:
             done = True
+
+        if validate:
+            done = False
 
         if display:
             if not self.windowsMade:
