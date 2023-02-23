@@ -56,25 +56,32 @@ Car.pid(1)
 (time_, rgb, depth, accel, gyro) = rs.getData(False)
 
 # start car
-fastSpeed = 1.5
+fastSpeed = .8
 Car.drive(fastSpeed)
 
 # driving loop
 while True:
+  
+  Car.drive(fastSpeed)
 
-    # get data from camera
-    (time_, img, depth, accel, gyro) = rs.getData(False)
+  # get data from camera
+  (time_, img, depth, accel, gyro) = rs.getData(False)
 
-    # get steering angle
-    action_idx = model(img).max(1)[1].view(1, 1)
-    angle = action_space[action_idx]
+  # prepare image to go into network
+  resizedImg = cv2.resize(img, (72, 128))
+  frame = torch.tensor(resizedImg, dtype=torch.float32).unsqueeze(0).cuda()
 
-    # apply steering angle to car
-    Car.steer(angle)
+  # get steering angle
+  with torch.no_grad():
+    action_idx = model(frame).max(1)[1].view(1, 1)    
+  angle = action_space[action_idx]
 
-    # display what camera sees
-    cv2.imshow("car", img)
+  # apply steering angle to car
+  Car.steer(angle)
 
-    if (cv2.waitKey(1) == ord('q')):
-        cv2.destroyAllWindows()
-        break
+  # display what camera sees
+  cv2.imshow("car", img)
+
+  if (cv2.waitKey(1) == ord('q')):
+      cv2.destroyAllWindows()
+      break
