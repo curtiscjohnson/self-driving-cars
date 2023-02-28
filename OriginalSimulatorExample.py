@@ -48,10 +48,10 @@ cv2.createTrackbar("steer", "map", controlSteer, maxSteer * 2, updateSteer)
 
 # Can pass map parameters:
 mapParameters = {
-    "loops": 5,
+    "loops": 3,
     "size": (7, 7),
     "expansions": 40,
-    "complications": 3
+    "complications": 10
 }
 
 # Can also pass car parameters for max/min speed, etc
