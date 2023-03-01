@@ -70,7 +70,7 @@ random.seed(seed)
 # can also pass a start location if you know the code: (y tile index, x tile index, position index, direction index)
 # - position index is from 0-(number of connections the tile has - 1), so a straight is 0 or 1, a t is 0, 1, or 2.
 # - direction index is 0 or 1 for normal or reversed.
-sim.start(mapSeed=seed, mapParameters=mapParameters, carParameters=carParameters)
+sim.start(mapSeed='real', mapParameters=mapParameters, carParameters=carParameters)
 
 car = sim.ackermann
 
@@ -85,6 +85,7 @@ while(True):
     cv2.imshow("map", newImg)
     cv2.imshow("car", img)
     distToCenter, bearingOffset = sim.getStats()
+    print(f'dist: {distToCenter}, bearing: {bearingOffset}')
     if (cv2.waitKey(1) == ord('q')): # this simulator waits for a keypress every frame because otherwise it'd be really hard to control I think.
         # You could probably implement arrow key control, but... I didn't.  So.
         # Press q to quit, anything else to advance 1/30 second.

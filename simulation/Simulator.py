@@ -105,12 +105,12 @@ class Simulator:
 
         reward = 0.0
         done = False
-        if distToCenter < 45:
+        if bearingOffset < 0.25 and distToCenter < 45:
             reward = (-1.0 / 45.0) * distToCenter + 1.0
         else:
             done = True
 
-        reward -= np.clip((bearingOffset / (np.pi / 2)), -1.0, 0.0)
+        # reward -= np.clip((bearingOffset / (np.pi / 2)), -1.0, 0.0)
 
         reward = float(reward)
 
