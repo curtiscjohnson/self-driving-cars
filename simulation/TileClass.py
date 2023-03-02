@@ -151,34 +151,8 @@ class Tile:
 
         if (tileType == "straight"):
             angleCompare = (np.deg2rad(-90. + (90 * numTurns)), np.deg2rad(90. + (90 * numTurns))) # should be straight relative to road
-            
-            bearingOffset = np.inf
-            driving_direction = np.inf
-            for a in angleCompare:
-                aDiff = absAngleDiff(a, carBearing, degrees=False)
-                if (aDiff < bearingOffset):
-                    bearingOffset = aDiff
-                    driving_direction = a
-
             # If it's straight, we just find how close to the middle of the road it is
             translateCompare = carPos.y if (numTurns % 2) else carPos.x # check horizontal or vertical coord of car depending on road orientation
-        
-            positionDiff = translateCompare - translateCompareTo
-            print(driving_direction)
-
-            if numTurns == 0:
-                if driving_direction == np.radians(-90): # N
-                    pass # Don't do anything
-                else: # S
-                    positionDiff = -1 * positionDiff
-
-            else: # numTurns == 1
-                if driving_direction == np.radians(0): # E 
-                    pass
-                else: # W
-                    positionDiff = -1 * positionDiff
-        
-        
         elif (tileType == "turn"):
             # if it's a turn, we start with a point in the to-right, since that represents the canonical configuration
             startCoord = coordinate(sideLen, 0)
@@ -193,8 +167,7 @@ class Tile:
             carAngle = carVector.angle()
             offset = np.deg2rad(90)
             angleCompare = (carAngle + offset, carAngle - offset) # should be at + or - 90 degrees to the angle
-            positionDiff = 0
-            bearingOffset = 0
+
         elif (tileType == "t-junc"):
             # first, we'll get values if it was a straight road, and if it was two curved roadds.
             options = [Tile.statHelper(typeOption, turnCount, carPos, carBearing) for typeOption, turnCount in zip(["straight", "turn", "turn"], [numTurns, numTurns, numTurns + 1])]
@@ -210,16 +183,45 @@ class Tile:
                 if (angle < bestAngle):
                     bestAngle = angle
             
-            return bestDist, bestAngle
+            return np.abs(bestDist), bestAngle
         else:
             raise Exception(f"Cannot compute, unknown tile type '{tileType}'.")
         
+
+        bearingOffset = np.inf
+        driving_direction = np.inf
+        for a in angleCompare:
+            aDiff = absAngleDiff(a, carBearing, degrees=False)
+            if (aDiff < bearingOffset):
+                bearingOffset = aDiff
+                driving_direction = angleCompare.index(a)
+
+        positionDiff = translateCompare - translateCompareTo
+        # print(f"numtursn: {numTurns}, driving direction: {driving_direction}")
+
+
+        # Works for Straight
+        if tileType == "straight":
+            if driving_direction == 0:
+            # if driving_direction == np.radians(-90) or driving_direction == np.radians(0): # N or E
+                pass # Don't do anything
+            else: # S or W
+                positionDiff = -1 * positionDiff
+
+        if (tileType == "turn"):
+            if driving_direction == 1: # N or E
+                pass # Don't do anything
+            else: # S or W
+                positionDiff = -1 * positionDiff
+
+
+        # ORiginal Code
         # positionDiff = abs(translateCompare - translateCompareTo)
-        # angleDiff = np.inf
+        # bearingOffset = np.inf
         # for a in angleCompare:
         #     aDiff = absAngleDiff(a, carBearing, degrees=False)
-        #     if (aDiff < angleDiff):
-        #         angleDiff = aDiff
+        #     if (aDiff < bearingOffset):
+        #         bearingOffset = aDiff
         return positionDiff, bearingOffset
 
 
