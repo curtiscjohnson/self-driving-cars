@@ -1,5 +1,6 @@
 import numpy as np
 import random
+from typing import Tuple
 from .polygonCalculator import coordinate
 from .generator import makeRoads, drawRoads
 from .tileGenerator import sideLen
@@ -10,7 +11,7 @@ class Map():
         self,
         seed = None,
         loops: int = 1,
-        size: tuple[int, int] = tuple([8, 8]),
+        size: Tuple[int, int] = tuple([8, 8]),
         expansions: int = 10,
         complications: int = 10
     ):

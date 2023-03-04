@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib
 # matplotlib.use("qtAgg")
+from typing import Tuple
 import matplotlib.pyplot as plt
 import math
 import random
@@ -559,7 +560,7 @@ def drawRoads(roads):
 
 def makeMap(
     loopCount: int = 1, # must be greater than 0
-    size: tuple[int, int] = tuple([8, 8]), # number of tiles in map
+    size: Tuple[int, int] = tuple([8, 8]), # number of tiles in map
     expansions: int = 0, # higher = more spread out map
     complications: int = 0, # higher = more convoluted map
 ):
