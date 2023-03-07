@@ -131,14 +131,12 @@ class Simulator:
         reward = 0.0
         done = False
 
-            # left hand bound                 right hand bound
-        if (distToCenter < -40 or distToCenter > 60) and not isIntersection:
-            done = True
-        else:
-            reward = (1 / (np.abs(45 - distToCenter) + 1)) * (1 - isIntersection) # make the reward 0 inside intersections
+        if not isIntersection:
+            if distToCenter < -60 or distToCenter > 60:
+                done = True
+            else:
+                reward += .5 / (np.abs(45 - distToCenter) + 1)
+                reward += .5 / (np.abs(np.degrees(bearingOffset)) + 1)
 
-        if bearingOffset > 1.0:
-            done = True
-            reward = 0.0
-
-        return float(reward), done
+        reward = float(reward)
+        return reward, done
