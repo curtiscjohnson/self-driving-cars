@@ -38,7 +38,6 @@ def preprocess_image(BGRimg):
     HSVimg = cv2.cvtColor(BGRimg, cv2.COLOR_BGR2HSV)
     HSVimg = cv2.GaussianBlur(HSVimg, (5,5),0)
     blackImg = np.zeros(HSVimg.shape, dtype = np.uint8)
-    print(blackImg.shape)
 
     # make everything we don't care about black
     lower_thresh = np.array([0, 0, 168])
@@ -63,6 +62,10 @@ def preprocess_image(BGRimg):
     upper_white = np.array([172,18,255])
     mask=cv2.inRange(HSVimg,lower_white,upper_white)
     blackImg[mask>0] = (255,255,255)
+
+    # black out top 1/3 of image
+    height, width, depth = blackImg.shape
+    blackImg[0:height // 3,:,:] = (0, 0, 0)
 
     return blackImg
 
