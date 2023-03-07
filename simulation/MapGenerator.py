@@ -72,5 +72,10 @@ class Map():
         tileIndex = position//tileSizeCoord
         offset = tileIndex * tileSizeCoord
         localCoords = position - offset
-        pixelsToCenter, bearingOffset, isIntersection = self.tiles[round(tileIndex.y), round(tileIndex.x)].getStats(localCoords, bearing)
-        return pixelsToCenter, bearingOffset, isIntersection
+        try:
+            pixelsToCenter, bearingOffset, isIntersection = self.tiles[round(tileIndex.y), round(tileIndex.x)].getStats(localCoords, bearing)
+            return pixelsToCenter, bearingOffset, isIntersection
+        except:
+            print(f"out of bounds. position: {position}, bearing: {bearing}")
+            return np.inf, np.inf, False
+
