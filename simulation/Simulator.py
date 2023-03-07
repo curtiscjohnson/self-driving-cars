@@ -93,39 +93,41 @@ class Simulator:
         # extract data about the car to be used in reward schemes.
         carPosition = self.ackermann.getCoord()
         carBearing = self.ackermann.getFacing()
-        distanceToCenter, bearingOffset = self.RealSense.currentMap.getStatistics(carPosition, carBearing)
-        return distanceToCenter, bearingOffset
+        distanceToCenter, bearingOffset, isIntersection = self.RealSense.currentMap.getStatistics(carPosition, carBearing)
+        return distanceToCenter, bearingOffset, isIntersection
 
-    def step(self,steer,speed,display=False,validate=False):
+    def step(self,steer,speed,display=False, validate=False):
         #for network training to step the simulation with steering and speed as input
         self.Arduino.setSpeed(speed)
         self.Arduino.setSteering(steer)
         frame = self.RealSense.getFrame()
-        distToCenter, bearingOffset = self.getStats()
+        distToCenter, bearingOffset, isIntersection = self.getStats()
 
         reward = 0.0
         done = False
 
             # left hand bound                 right hand bound
-        if distToCenter < -60 or distToCenter > 60:
+        if (distToCenter < -40 or distToCenter > 60) and not isIntersection:
             done = True
-        else:
-            reward += 1 / (np.abs(45 - distToCenter) + 1)
+        elif (distToCenter > -20 and distToCenter < 55):
+            # reward += 1.0
+                # elif distToCenter > 15 and distToCenter < 60:
+            reward += (1 / (np.abs(45 - distToCenter) + 1)) * (1 - isIntersection) # make the reward 0 inside intersections
 
-        if bearingOffset > 1:
+        if bearingOffset > 1.0:
             done = True
             reward = 0.0
 
         reward = float(reward)
 
         if validate:
-
-            done = False
+            print(f'distance: {distToCenter}, bearing: {bearingOffset}, isIntersection: {isIntersection}')
 
         if display:
             if not self.windowsMade:
                 cv2.namedWindow("map", cv2.WINDOW_NORMAL)
                 cv2.namedWindow("car", cv2.WINDOW_NORMAL)
+            # show_frame = 
             cv2.imshow("car",frame)
             carPlace = self.ackermann.getCoord()
             map = self.RealSense.currentImg.copy()
@@ -151,3 +153,8 @@ class Simulator:
     #         return np.minimum(1, .1/bearingOffset)
         
     #     return 0
+
+    def display(self, frame):
+        frame = np.array(frame.squeeze(0).squeeze(0).cpu())
+        cv2.namedWindow("CAR VIEW", cv2.WINDOW_NORMAL)
+        cv2.imshow("CAR VIEW", frame)
