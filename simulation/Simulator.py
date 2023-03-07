@@ -93,39 +93,26 @@ class Simulator:
         # extract data about the car to be used in reward schemes.
         carPosition = self.ackermann.getCoord()
         carBearing = self.ackermann.getFacing()
-        distanceToCenter, bearingOffset = self.RealSense.currentMap.getStatistics(carPosition, carBearing)
-        return distanceToCenter, bearingOffset
+        distanceToCenter, bearingOffset, isIntersection = self.RealSense.currentMap.getStatistics(carPosition, carBearing)
+        return distanceToCenter, bearingOffset, isIntersection
 
-    def step(self,steer,speed,display=False,validate=False):
+    def step(self,steer,speed,display=False, validate=False):
         #for network training to step the simulation with steering and speed as input
         self.Arduino.setSpeed(speed)
         self.Arduino.setSteering(steer)
         frame = self.RealSense.getFrame()
-        distToCenter, bearingOffset = self.getStats()
+        distToCenter, bearingOffset, isIntersection = self.getStats()
 
-        reward = 0.0
-        done = False
-
-            # left hand bound                 right hand bound
-        if distToCenter < -60 or distToCenter > 60:
-            done = True
-        else:
-            reward += 1 / (np.abs(45 - distToCenter) + 1)
-
-        if bearingOffset > 1:
-            done = True
-            reward = 0.0
-
-        reward = float(reward)
+        reward, done = self.getReward(distToCenter, bearingOffset, isIntersection)
 
         if validate:
-
-            done = False
+            print(f'distance: {distToCenter}, bearing: {bearingOffset}, isIntersection: {isIntersection}')
 
         if display:
             if not self.windowsMade:
                 cv2.namedWindow("map", cv2.WINDOW_NORMAL)
                 cv2.namedWindow("car", cv2.WINDOW_NORMAL)
+            # show_frame = 
             cv2.imshow("car",frame)
             carPlace = self.ackermann.getCoord()
             map = self.RealSense.currentImg.copy()
@@ -140,14 +127,18 @@ class Simulator:
             cv2.waitKey(1)
         return frame,reward,done
 
-    # def getReward(self):
-    #     # return negative reward if crashed positive reward if doing
-    #     distToCenter, bearingOffset = self.getStats()
-    #     reward = 0.0
-    #     bearing_thresh = 0.2
+    def getReward(self, distToCenter, bearingOffset, isIntersection):
+        reward = 0.0
+        done = False
 
-    #     # threshold=40 #experimentally determined
-    #     if bearingOffset < bearing_thresh:
-    #         return np.minimum(1, .1/bearingOffset)
-        
-    #     return 0
+            # left hand bound                 right hand bound
+        if (distToCenter < -40 or distToCenter > 60) and not isIntersection:
+            done = True
+        else:
+            reward = (1 / (np.abs(45 - distToCenter) + 1)) * (1 - isIntersection) # make the reward 0 inside intersections
+
+        if bearingOffset > 1.0:
+            done = True
+            reward = 0.0
+
+        return float(reward), done

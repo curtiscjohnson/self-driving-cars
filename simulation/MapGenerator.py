@@ -72,5 +72,5 @@ class Map():
         tileIndex = position//tileSizeCoord
         offset = tileIndex * tileSizeCoord
         localCoords = position - offset
-        pixelsToCenter, bearingOffset = self.tiles[round(tileIndex.y), round(tileIndex.x)].getStats(localCoords, bearing)
-        return pixelsToCenter, bearingOffset
+        pixelsToCenter, bearingOffset, isIntersection = self.tiles[round(tileIndex.y), round(tileIndex.x)].getStats(localCoords, bearing)
+        return pixelsToCenter, bearingOffset, isIntersection

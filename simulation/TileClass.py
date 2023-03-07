@@ -177,13 +177,13 @@ class Tile:
             bestAngle = np.inf
 
             for option in options:
-                dist, angle = option
+                dist, angle, isIntersection = option
                 if (dist < bestDist):
                     bestDist = dist
                 if (angle < bestAngle):
                     bestAngle = angle
             
-            return np.abs(bestDist), bestAngle
+            return np.abs(bestDist), bestAngle, True
         else:
             raise Exception(f"Cannot compute, unknown tile type '{tileType}'.")
         
@@ -222,14 +222,14 @@ class Tile:
         #     aDiff = absAngleDiff(a, carBearing, degrees=False)
         #     if (aDiff < bearingOffset):
         #         bearingOffset = aDiff
-        return positionDiff, bearingOffset
+        return positionDiff, bearingOffset, False
 
 
     def getStats(self, carPos: coordinate, carBearing: float):
         type = self.type()
         if (type == "empty"):
             # if the car is on a blank tile, it's bad:
-            return np.inf, np.inf # distance to center line and bearing offset are both set to inf because we don't have anything to compare to
+            return np.inf, np.inf, False # distance to center line and bearing offset are both set to inf because we don't have anything to compare to
         elif (type == "straight"):
             numTurns = 0 if "n" in self.getOpenSides() else 1
             return self.statHelper(type, numTurns, carPos, carBearing)
