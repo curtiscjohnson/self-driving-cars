@@ -103,22 +103,7 @@ class Simulator:
         frame = self.RealSense.getFrame()
         distToCenter, bearingOffset, isIntersection = self.getStats()
 
-        reward = 0.0
-        done = False
-
-            # left hand bound                 right hand bound
-        if (distToCenter < -40 or distToCenter > 60) and not isIntersection:
-            done = True
-        elif (distToCenter > -20 and distToCenter < 55):
-            # reward += 1.0
-                # elif distToCenter > 15 and distToCenter < 60:
-            reward += (1 / (np.abs(45 - distToCenter) + 1)) * (1 - isIntersection) # make the reward 0 inside intersections
-
-        if bearingOffset > 1.0:
-            done = True
-            reward = 0.0
-
-        reward = float(reward)
+        reward, done = self.getReward(distToCenter, bearingOffset, isIntersection)
 
         if validate:
             print(f'distance: {distToCenter}, bearing: {bearingOffset}, isIntersection: {isIntersection}')
@@ -142,19 +127,18 @@ class Simulator:
             cv2.waitKey(1)
         return frame,reward,done
 
-    # def getReward(self):
-    #     # return negative reward if crashed positive reward if doing
-    #     distToCenter, bearingOffset = self.getStats()
-    #     reward = 0.0
-    #     bearing_thresh = 0.2
+    def getReward(self, distToCenter, bearingOffset, isIntersection):
+        reward = 0.0
+        done = False
 
-    #     # threshold=40 #experimentally determined
-    #     if bearingOffset < bearing_thresh:
-    #         return np.minimum(1, .1/bearingOffset)
-        
-    #     return 0
+            # left hand bound                 right hand bound
+        if (distToCenter < -40 or distToCenter > 60) and not isIntersection:
+            done = True
+        else:
+            reward = (1 / (np.abs(45 - distToCenter) + 1)) * (1 - isIntersection) # make the reward 0 inside intersections
 
-    def display(self, frame):
-        frame = np.array(frame.squeeze(0).squeeze(0).cpu())
-        cv2.namedWindow("CAR VIEW", cv2.WINDOW_NORMAL)
-        cv2.imshow("CAR VIEW", frame)
+        if bearingOffset > 1.0:
+            done = True
+            reward = 0.0
+
+        return float(reward), done
