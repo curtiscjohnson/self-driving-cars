@@ -72,56 +72,57 @@ cv2.imshow("car", preprocessedImg)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-# load in RL model
-path = './rl_models/working_2actmodel.pt'
-action_size = 2
-action_space = [-30,30]
-model = QNetwork(action_size)
-model = torch.load(path)
-model.eval()
+# # load in RL model
+# path = './rl_models/working_2actmodel.pt'
+# action_size = 2
+# action_space = [-30,30]
+# model = QNetwork(action_size)
+# model = torch.load(path)
+# model.eval()
 
-# initialize realsense camera
-enableDepth = True
-rs = RealSense("/dev/video2", RS_VGA, enableDepth)
-writer = None
+# # initialize realsense camera
+# enableDepth = True
+# rs = RealSense("/dev/video2", RS_VGA, enableDepth)
+# writer = None
 
-# initialize car
-Car = Arduino("/dev/ttyUSB0", 115200)  
-Car.zero(1440)
-Car.pid(1)
+# # initialize car
+# Car = Arduino("/dev/ttyUSB0", 115200)  
+# Car.zero(1440)
+# Car.pid(1)
 
-# start camera
-(time_, rgb, depth, accel, gyro) = rs.getData(False)
+# # start camera
+# (time_, rgb, depth, accel, gyro) = rs.getData(False)
 
-# start car
-fastSpeed = .8
-Car.drive(fastSpeed)
+# # start car
+# fastSpeed = .8
+# Car.drive(fastSpeed)
 
-# driving loop
-while True:
+# # driving loop
+# while True:
   
-  Car.drive(fastSpeed)
+#   # Car.drive(fastSpeed)
 
-  # get data from camera
-  (time_, img, depth, accel, gyro) = rs.getData(False)
+#   # get data from camera
+#   (time_, img, depth, accel, gyro) = rs.getData(False)
 
-  # prepare image to go into network
-  resizedImg = cv2.resize(img, (72, 128))
-  imageToNetwork = preprocess_image(resizedImg)
+#   # prepare image to go into network
+#   preprocessedImg = preprocess_image(img)
+#   resizedImg = cv2.resize(preprocessedImg, (128, 72))
 
-  frame = torch.tensor(imageToNetwork, dtype=torch.float32).unsqueeze(0).cuda()
+#   frame = torch.tensor(resizedImg, dtype=torch.float32).unsqueeze(0).cuda()
 
-  # get steering angle
-  with torch.no_grad():
-    action_idx = model(frame).max(1)[1].view(1, 1)    
-  angle = action_space[action_idx]
+#   # get steering angle
+#   with torch.no_grad():
+#     action_idx = model(frame).max(1)[1].view(1, 1)    
+#   angle = action_space[action_idx]
 
-  # apply steering angle to car
-  Car.steer(angle)
+#   # apply steering angle to car
+#   # Car.steer(angle)
 
-  # display what camera sees
-  cv2.imshow("car", img)
+#   # display what camera sees
+#   cv2.namedWindow("car", cv2.WINDOW_NORMAL)
+#   cv2.imshow("car", resizedImg)
 
-  if (cv2.waitKey(1) == ord('q')):
-      cv2.destroyAllWindows()
-      break
+#   if (cv2.waitKey(1) == ord('q')):
+#       cv2.destroyAllWindows()
+#       break
