@@ -158,16 +158,17 @@ if __name__ == "__main__":
         "exploration_final_eps": 0.01,
     }
 
-    manager = Manager()
-    jobs = []
-    numWorkers = 1
+    # manager = Manager()
+    # jobs = []
+    # numWorkers = 1
 
-    for i in range(numWorkers):
-        p = Process(target=train, args=(config, False))
-        jobs.append(p)
-        p.start()
+    # for i in range(numWorkers):
+    #     p = Process(target=train, args=(config, False))
+    #     jobs.append(p)
+    #     p.start()
 
-    for proc in jobs:
-        proc.join()
+    # for proc in jobs:
+    #     proc.join()
 
+    train(config, False)
 
