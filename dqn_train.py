@@ -3,13 +3,13 @@ from CustomDuckieTownEnv import CustomDuckieTownSim
 from stable_baselines3 import DQN
 from stable_baselines3.dqn import CnnPolicy
 from stable_baselines3.common.vec_env import DummyVecEnv, VecVideoRecorder
+from stable_baselines3.common.callbacks import CheckpointCallback
 from torch import tensor
 import wandb
 from wandb.integration.sb3 import WandbCallback
 from multiprocessing import Manager, Process
 from stable_baselines3.common.vec_env import VecFrameStack
-
-
+import random
 
 def make_env(display, config):
     env = CustomDuckieTownSim(
@@ -20,24 +20,9 @@ def make_env(display, config):
         display,
     )
     env = Monitor(env)  # record stats such as returns
-    return env
-
-
-def train(config):
-
-
-    run = wandb.init(
-        project="self_driving_cars",
-        config=config,
-        sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
-        monitor_gym=True,  # auto-upload the videos of agents playing the game
-        save_code=True,  # optional
-    )
-
-    env = make_env(False, config)
 
     # Frame-stacking with 4 frames
-    env = VecFrameStack(env, n_stack=4)
+    # env = VecFrameStack(env, n_stack=4)
 
     # env = DummyVecEnv([make_env])
 
@@ -45,41 +30,85 @@ def train(config):
     #     env,
     #     f"videos/{run.id}",For some reason I can't get on github, but I'm pretty sure it's in the tile generator file. Definitely in the simulation folder, one of the tile classes
 
-
     #     record_video_trigger=lambda x: x % 2000 == 0,
     #     video_length=200
-    # )
+    #
+    return env
 
-    model = DQN(
-        config["policy"],
-        env,
-        learning_rate=config["learning_rate"],
-        batch_size=config["batch_size"],
-        buffer_size=config["buffer_size"],
-        learning_starts=config["learning_starts"],
-        gamma=config["gamma"],
-        target_update_interval=config["target_update_interval"],
-        train_freq=config["train_freq"],
-        gradient_steps=config["gradient_steps"],
-        exploration_fraction=config["exploration_fraction"],
-        exploration_final_eps=config["exploration_final_eps"],
-        # policy_kwargs=config["policy_kwargs"],
-        tensorboard_log=f"runs/{run.id}",
-        verbose=1,
-        # seed=config["seed"]
-    )
 
-    trained_model = model.learn(
-        total_timesteps=config["n_timesteps"],
-        callback=WandbCallback(
-            gradient_save_freq=100,
-            model_save_path=f"models/{run.id}",
-            verbose=0,
-            model_save_freq=1000,
-            log='all',
-        ),
-    )
-    run.finish()
+def train(config, sync2wandb=False):
+
+    env = make_env(False, config)
+    if sync2wandb:
+        run = wandb.init(
+            project="sb3",
+            config=config,
+            sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
+            monitor_gym=True,  # auto-upload the videos of agents playing the game
+            save_code=True,  # optional
+        )
+
+        model = DQN(
+            config["policy"],
+            env,
+            learning_rate=config["learning_rate"],
+            batch_size=config["batch_size"],
+            buffer_size=config["buffer_size"],
+            learning_starts=config["learning_starts"],
+            gamma=config["gamma"],
+            target_update_interval=config["target_update_interval"],
+            train_freq=config["train_freq"],
+            gradient_steps=config["gradient_steps"],
+            exploration_fraction=config["exploration_fraction"],
+            exploration_final_eps=config["exploration_final_eps"],
+            tensorboard_log=f"sb3_runs/wandb/{run.id}",
+            verbose=1,
+        )
+
+        final_model = model.learn(
+            total_timesteps=config["n_timesteps"],
+            tb_log_name=model.tensorboard_log,
+            callback=WandbCallback(
+                # gradient_save_freq=100,
+                model_save_path=f"sb3_models/wandb/{run.id}",
+                verbose=1,
+                model_save_freq=10,
+                log="all",
+            ),
+            # https://github.com/wandb/wandb/blob/72eeaa2c975cddd540a72223fa11c3f2537371a6/wandb/integration/sb3/sb3.py
+            # ! I think wandb overwrites model.zip every time...
+        )
+
+        run.finish()
+    else:
+        run = random.randint(0,1000)
+
+        model = DQN(
+            config["policy"],
+            env,
+            learning_rate=config["learning_rate"],
+            batch_size=config["batch_size"],
+            buffer_size=config["buffer_size"],
+            learning_starts=config["learning_starts"],
+            gamma=config["gamma"],
+            target_update_interval=config["target_update_interval"],
+            train_freq=config["train_freq"],
+            gradient_steps=config["gradient_steps"],
+            exploration_fraction=config["exploration_fraction"],
+            exploration_final_eps=config["exploration_final_eps"],
+            tensorboard_log=f"./sb3_runs/local/{run}",
+            verbose=1,
+        )
+
+        final_model = model.learn(
+            total_timesteps=config["n_timesteps"],
+            tb_log_name=model.tensorboard_log,
+            callback=CheckpointCallback(
+                save_freq=100,
+                save_path=f"./sb3_models/local/{run}",
+                name_prefix=f"{run}_model",
+            ),
+        )
 
 
 if __name__ == "__main__":
@@ -108,9 +137,9 @@ if __name__ == "__main__":
         "maxVelocity": 480.0,  # pixels/second, 8 pixels/inch, so if the car can move 5 fps that gives us 480 pixels/s top speed
     }
 
-#taken from https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/dqn.yml
+    # taken from https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/dqn.yml
     config = {
-        "n_timesteps": 1e6,  # sb3 dqn runs go up to 1e7 at most
+        "n_timesteps": 1000,  # sb3 dqn runs go up to 1e7 at most
         "policy": "CnnPolicy",
         "env": "CustomDuckieTown",
         "actions": [-30, 0, 30],
@@ -129,20 +158,16 @@ if __name__ == "__main__":
         "exploration_final_eps": 0.01,
     }
 
+    manager = Manager()
+    jobs = []
+    numWorkers = 1
 
-    # manager = Manager()
-    # model_dict = manager.dict()
-    # jobs = []
-    # numWorkers = 1
+    for i in range(numWorkers):
+        p = Process(target=train, args=(config, False))
+        jobs.append(p)
+        p.start()
 
-    # for i in range(numWorkers):
-    #     p = Process(target=train, args=(random.randint(0,100), model_dict))
-    #     jobs.append(p)
-    #     p.start()
+    for proc in jobs:
+        proc.join()
 
-    # for proc in jobs:
-    #     proc.join()
 
-    # print(model_dict.keys())
-
-    train(config)

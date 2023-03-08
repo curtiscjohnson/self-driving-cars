@@ -1,5 +1,7 @@
-models/*
+sb3_models/*
+sb3_runs/*
 wandb/*
 runs/*
 
 *.pyc
+*.zip
