@@ -35,80 +35,15 @@ def make_env(display, config):
     #
     return env
 
+def validate(model, config):
+    env = make_env(True, config)
+    obs = env.reset()
+    while True:
+        action, _states = model.predict(obs, deterministic=True)
+        obs, reward, done, info = env.step(action)
+        if done:
+            obs = env.reset()
 
-def train(config, sync2wandb=False):
-
-    env = make_env(False, config)
-    if sync2wandb:
-        run = wandb.init(
-            project="sb3",
-            config=config,
-            sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
-            monitor_gym=True,  # auto-upload the videos of agents playing the game
-            save_code=True,  # optional
-        )
-
-        model = DQN(
-            config["policy"],
-            env,
-            learning_rate=config["learning_rate"],
-            batch_size=config["batch_size"],
-            buffer_size=config["buffer_size"],
-            learning_starts=config["learning_starts"],
-            gamma=config["gamma"],
-            target_update_interval=config["target_update_interval"],
-            train_freq=config["train_freq"],
-            gradient_steps=config["gradient_steps"],
-            exploration_fraction=config["exploration_fraction"],
-            exploration_final_eps=config["exploration_final_eps"],
-            tensorboard_log=f"sb3_runs/wandb/{run.id}",
-            verbose=1,
-        )
-
-        final_model = model.learn(
-            total_timesteps=config["n_timesteps"],
-            tb_log_name=model.tensorboard_log,
-            callback=WandbCallback(
-                # gradient_save_freq=100,
-                model_save_path=f"sb3_models/wandb/{run.id}",
-                verbose=1,
-                model_save_freq=10,
-                log="all",
-            ),
-            # https://github.com/wandb/wandb/blob/72eeaa2c975cddd540a72223fa11c3f2537371a6/wandb/integration/sb3/sb3.py
-            # ! I think wandb overwrites model.zip every time...
-        )
-
-        run.finish()
-    else:
-        run = random.randint(0,1000)
-
-        model = DQN(
-            config["policy"],
-            env,
-            learning_rate=config["learning_rate"],
-            batch_size=config["batch_size"],
-            buffer_size=config["buffer_size"],
-            learning_starts=config["learning_starts"],
-            gamma=config["gamma"],
-            target_update_interval=config["target_update_interval"],
-            train_freq=config["train_freq"],
-            gradient_steps=config["gradient_steps"],
-            exploration_fraction=config["exploration_fraction"],
-            exploration_final_eps=config["exploration_final_eps"],
-            tensorboard_log=f"./sb3_runs/local/{run}",
-            verbose=1,
-        )
-
-        final_model = model.learn(
-            total_timesteps=config["n_timesteps"],
-            tb_log_name=model.tensorboard_log,
-            callback=CheckpointCallback(
-                save_freq=10000,
-                save_path=f"./sb3_models/local/{run}",
-                name_prefix=f"{run}_model",
-            ),
-        )
 
 
 if __name__ == "__main__":
@@ -158,17 +93,7 @@ if __name__ == "__main__":
         "exploration_final_eps": 0.01,
     }
 
-    # manager = Manager()
-    # jobs = []
-    # numWorkers = 1
-
-    # for i in range(numWorkers):
-    #     p = Process(target=train, args=(config, False))
-    #     jobs.append(p)
-    #     p.start()
-
-    # for proc in jobs:
-    #     proc.join()
-
-    train(config, False)
+    # model = DQN.load("./sb3_models/local/650/650_model_760000_steps.zip")
+    model = DQN.load("./sb3_models/local/91/91_model_1000000_steps.zip")
+    validate(model, config)
 
