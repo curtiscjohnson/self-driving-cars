@@ -84,8 +84,8 @@ while(True):
     # cv2.imshow("map", realsense.currentImg)
     cv2.imshow("map", newImg)
     cv2.imshow("car", img)
-    distToCenter, bearingOffset = sim.getStats()
-    print(f'dist: {distToCenter}, bearing: {bearingOffset}')
+    distToCenter, bearingOffset, isIntersection = sim.getStats()
+    print(f'dist: {distToCenter}, bearing: {bearingOffset}, intersection: {isIntersection}')
     if (cv2.waitKey(1) == ord('q')): # this simulator waits for a keypress every frame because otherwise it'd be really hard to control I think.
         # You could probably implement arrow key control, but... I didn't.  So.
         # Press q to quit, anything else to advance 1/30 second.

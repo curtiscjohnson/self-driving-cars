@@ -48,11 +48,11 @@ class CustomDuckieTownSim(gym.Env):
         # !SB3 CNNPolicy normalizes images by default.
 
         HSVimg = cv2.cvtColor(raw_img, cv2.COLOR_BGR2HSV)
-        HSVimg = cv2.GaussianBlur(HSVimg, (5,5),0)
+        # HSVimg = cv2.GaussianBlur(HSVimg, (5,5),0)
         blackImg = np.zeros(HSVimg.shape, dtype = np.uint8)
     
         # make true yellow
-        lower_yellow = np.array([14,116,147])
+        lower_yellow = np.array([14,116,0])
         upper_yellow = np.array([100,255,255])
         mask=cv2.inRange(HSVimg,lower_yellow,upper_yellow)
         blackImg[mask>0] = (0,255,255)
@@ -76,6 +76,11 @@ class CustomDuckieTownSim(gym.Env):
         self.info = {}
 
         observation = self.preprocess_img(raw_img)
+        cv2.namedWindow('observation', cv2.WINDOW_NORMAL)
+        cv2.namedWindow('raw', cv2.WINDOW_NORMAL)
+        cv2.imshow('observation', observation)
+        cv2.imshow('raw', raw_img)
+        cv2.waitKey(0)
         return observation, reward, self.done, self.info
 
     def reset(self):
