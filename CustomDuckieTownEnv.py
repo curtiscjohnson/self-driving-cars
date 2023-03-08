@@ -3,6 +3,7 @@ import numpy as np
 from gym import spaces
 from simulation import Simulator
 import random
+import cv2
 
 
 class CustomDuckieTownSim(gym.Env):
@@ -45,7 +46,28 @@ class CustomDuckieTownSim(gym.Env):
         # maybe also do some horizon cropping? maybe not important for sim training
         # also maybe stacking a short sequence of images too? - https://stable-baselines3.readthedocs.io/en/master/guide/vec_envs.html#vecframestack
         # !SB3 CNNPolicy normalizes images by default.
-        return raw_img
+
+        HSVimg = cv2.cvtColor(raw_img, cv2.COLOR_BGR2HSV)
+        HSVimg = cv2.GaussianBlur(HSVimg, (5,5),0)
+        blackImg = np.zeros(HSVimg.shape, dtype = np.uint8)
+    
+        # make true yellow
+        lower_yellow = np.array([14,116,147])
+        upper_yellow = np.array([100,255,255])
+        mask=cv2.inRange(HSVimg,lower_yellow,upper_yellow)
+        blackImg[mask>0] = (0,255,255)
+
+        # make true red
+        lower_red = np.array([0,50,20])
+        upper_red = np.array([5,255,255])
+        mask=cv2.inRange(HSVimg,lower_red,upper_red)
+        blackImg[mask>0] = (0,0,255)
+
+        # black out top 1/3 of image
+        height, width, depth = blackImg.shape
+        blackImg[0:height // 3,:,:] = (0, 0, 0)
+
+        return blackImg
 
     def step(self, action):
         raw_img, reward, self.done = self.sim.step(
