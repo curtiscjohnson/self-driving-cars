@@ -7,6 +7,9 @@ import lightning_mcqueen as lm
 import torch
 import torch.nn as nn
 from stable_baselines3 import DQN
+from utils_network import NatureCNN
+from gym import spaces
+
 
 def preprocess_image(BGRimg):
 
@@ -52,8 +55,17 @@ def preprocess_image(BGRimg):
     return blackImg
 
 def setup_loading_model():
+    N_CHANNELS = 3
+    (HEIGHT, WIDTH) = (64, 64)
+    observation_space = spaces.Box(
+        low=0, high=1, shape=(N_CHANNELS, HEIGHT, WIDTH), dtype=np.uint8
+    )
+    # model = DQN.load("./sb3_models/local/650/650_model_760000_steps.zip")
+    model = NatureCNN(observation_space, [-30,-15, 0, 15, 30], normalized_image=True)
+    
+    model.load_state_dict(torch.load("./CUSTOM_SAVE.pt"))
 
-    model = DQN.load("./sb3_models/local/650/650_model_760000_steps.zip")
+    return model
 
 # path = r'/fsg/hps22/self-driving-cars/testimg.jpg'
 # preprocessedImg = preprocess_image(cv2.imread(path))
@@ -63,7 +75,7 @@ def setup_loading_model():
 
 # load in RL model
 model = setup_loading_model()
-action_space = [-30, 0, 30]
+action_space = [-30, -15, 0, 15, 30]
 
 # initialize realsense camera
 enableDepth = True
@@ -95,7 +107,8 @@ while True:
   resizedImg = cv2.resize(preprocessedImg, (64, 64))
 
   # get steering angle
-  action_idx, _ = model.predict(resizedImg, deterministic=True)    
+#   action_idx, _ = model.predict(resizedImg, deterministic=True)  
+  action_idx = model(torch.from_numpy(resizedImg/255).float()).max(0)[1].view(1,1)  
   angle = action_space[action_idx]
 
   # apply steering angle to car
