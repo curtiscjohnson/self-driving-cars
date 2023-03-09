@@ -30,7 +30,7 @@ import imutils
 import cv2
 from simple_pid import PID
 import time as tm
-import lightning_mcqueen as lm
+import PID_Code.sim_testing_images.lightning_mcqueen as lm
 import detect_lane as dl
 
 enableDepth = True

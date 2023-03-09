@@ -10,7 +10,7 @@ from simple_pid import PID
 
 import matplotlib.pyplot as plt
 
-import lightning_mcqueen as lm
+import PID_Code.lightning_mcqueen as lm
 import detect_lane as dl
 import time
 import collections
