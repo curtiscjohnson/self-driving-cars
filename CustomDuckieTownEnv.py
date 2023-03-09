@@ -42,32 +42,25 @@ class CustomDuckieTownSim(gym.Env):
         # ! I'm pretty sure observation space is supposed to be the features the agent has access to -- the preprocessed image.
 
     def preprocess_img(self, raw_img):
-        # some feature engineering to separate out red/white/yellow was done in that paper
-        # maybe also do some horizon cropping? maybe not important for sim training
-        # also maybe stacking a short sequence of images too? - https://stable-baselines3.readthedocs.io/en/master/guide/vec_envs.html#vecframestack
-        # !SB3 CNNPolicy normalizes images by default.
+            # some feature engineering to separate out red/white/yellow was done in that paper
+            # maybe also do some horizon cropping? maybe not important for sim training
+            # also maybe stacking a short sequence of images too? - https://stable-baselines3.readthedocs.io/en/master/guide/vec_envs.html#vecframestack
+            # !SB3 CNNPolicy normalizes images by default.
 
-        HSVimg = cv2.cvtColor(raw_img, cv2.COLOR_BGR2HSV)
-        # HSVimg = cv2.GaussianBlur(HSVimg, (5,5),0)
-        blackImg = np.zeros(HSVimg.shape, dtype = np.uint8)
-    
-        # make true yellow
-        lower_yellow = np.array([14,116,0])
-        upper_yellow = np.array([100,255,255])
-        mask=cv2.inRange(HSVimg,lower_yellow,upper_yellow)
-        blackImg[mask>0] = (0,255,255)
+            # black out top 1/3 of image
+            height, width, depth = raw_img.shape
+            raw_img[0:height // 3,:,:] = (0, 0, 0)
 
-        # make true red
-        lower_red = np.array([0,50,20])
-        upper_red = np.array([5,255,255])
-        mask=cv2.inRange(HSVimg,lower_red,upper_red)
-        blackImg[mask>0] = (0,0,255)
+            HSVimg = cv2.cvtColor(raw_img, cv2.COLOR_BGR2HSV)
 
-        # black out top 1/3 of image
-        height, width, depth = blackImg.shape
-        blackImg[0:height // 3,:,:] = (0, 0, 0)
+            # erase white
+            lower_white = np.array([0,0,168])
+            upper_white = np.array([172,112,255])
+            mask=cv2.inRange(HSVimg,lower_white,upper_white)
+            HSVimg[mask>0] = (0, 0, 0)
+            img = cv2.cvtColor(HSVimg, cv2.COLOR_HSV2BGR)
 
-        return blackImg
+            return img
 
     def step(self, action):
         raw_img, reward, self.done = self.sim.step(
