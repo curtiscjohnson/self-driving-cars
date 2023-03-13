@@ -90,7 +90,7 @@ Car.pid(1)
 (time_, rgb, depth, accel, gyro) = rs.getData(False)
 
 # start car
-fastSpeed = .8
+fastSpeed = 1.0
 Car.drive(fastSpeed)
 
 # driving loop
