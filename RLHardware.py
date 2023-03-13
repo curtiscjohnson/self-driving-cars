@@ -3,10 +3,9 @@ from RealSense import *
 import numpy as np
 import cv2
 import time as tm
-import lightning_mcqueen as lm
 import torch
 import torch.nn as nn
-from stable_baselines3 import DQN
+# from stable_baselines3 import DQN
 from utils_network import NatureCNN
 from gym import spaces
 
@@ -106,9 +105,13 @@ while True:
   preprocessedImg = preprocess_image(img)
   resizedImg = cv2.resize(preprocessedImg, (64, 64))
 
+  networkImg = np.moveaxis(resizedImg, 2, 0)
+#   print(resizedImg.shape)
+#   print(model)
+
   # get steering angle
 #   action_idx, _ = model.predict(resizedImg, deterministic=True)  
-  action_idx = model(torch.from_numpy(resizedImg/255).float()).max(0)[1].view(1,1)  
+  action_idx = model(torch.from_numpy(networkImg/255).float()).max(0)[1].view(1,1)  
   angle = action_space[action_idx]
 
   # apply steering angle to car
