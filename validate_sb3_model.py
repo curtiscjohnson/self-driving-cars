@@ -1,16 +1,11 @@
-from stable_baselines3.common.monitor import Monitor
-from CustomDuckieTownEnv import CustomDuckieTownSim
+import json
+
 from stable_baselines3 import DQN
-from stable_baselines3.dqn import CnnPolicy
-from stable_baselines3.common.vec_env import DummyVecEnv, VecVideoRecorder
-from stable_baselines3.common.callbacks import CheckpointCallback
+from stable_baselines3.common.monitor import Monitor
 from torch import tensor
-import wandb
-from wandb.integration.sb3 import WandbCallback
-from multiprocessing import Manager, Process
-from stable_baselines3.common.vec_env import VecFrameStack
-import random
-import torch
+
+from CustomDuckieTownEnv import CustomDuckieTownSim
+
 
 def make_env(display, config):
     env = CustomDuckieTownSim(
@@ -42,81 +37,23 @@ def validate(model, config):
     while True:
         action, _states = model.predict(obs, deterministic=True)
         obs, reward, done, info = env.step(action)
-        print(obs.shape)
         if done:
             obs = env.reset()
 
 
 
 if __name__ == "__main__":
-    img_size = (64, 64)
-    cameraSettings = {
-        # "resolution": (1920, 1080),
-        "resolution": img_size,
-        "fov": {"diagonal": 77},  # realsense diagonal fov is 77 degrees IIRC
-        "angle": {
-            "roll": 0,
-            "pitch": 0,
-            "yaw": 0,
-        },  # don't go too crazy with these, my code should be good up to like... 45 degrees probably? But the math gets unstable
-        # "angle": {"roll": 13, "pitch": 30, "yaw": 30}, # don't go too crazy with these, my code should be good up to like... 45 degrees probably? But the math gets unstable
-        "height": 66,  # 8 pixels/inch - represents how high up the camera is relative to the road
-    }
 
-    mapParameters = {"loops": 1, "size": (6, 6), "expansions": 5, "complications": 4}
-
-    # Can also pass car parameters for max/min speed, etc
-    carParameters = {
-        "wheelbase": 6.5,  # inches, influences how quickly the steering will turn the car.  Larger = slower
-        "maxSteering": 30.0,  # degrees, extreme (+ and -) values of steering
-        "steeringOffset": 0.0,  # degrees, since the car is rarely perfectly aligned
-        "minVelocity": 0.0,  # pixels/second, slower than this doesn't move at all.
-        "maxVelocity": 480.0,  # pixels/second, 8 pixels/inch, so if the car can move 5 fps that gives us 480 pixels/s top speed
-    }
-
-    # taken from https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/dqn.yml
-    config = {
-        "n_timesteps": 1e6,  # sb3 dqn runs go up to 1e7 at most
-        "policy": "CnnPolicy",
-        "env": "CustomDuckieTown",
-        "actions": [-30,-15, 0, 15, 30],
-        "camera_settings": cameraSettings,
-        "map_parameters": mapParameters,
-        "car_parameters": carParameters,
-        "learning_rate": 1e-4,
-        "batch_size": 32,
-        "buffer_size": 100000,
-        "learning_starts": 100000,
-        "gamma": 0.99,
-        "target_update_interval": 1000,
-        "train_freq": 4,
-        "gradient_steps": 1,
-        "exploration_fraction": 0.1,
-        "exploration_final_eps": 0.01,
-    }
-
+    model_path = "./sb3_models/local/8818761/"
     # model = DQN.load("./sb3_models/local/650/650_model_760000_steps.zip")
     # model = DQN.load("./sb3_models/local/91/91_model_1000000_steps.zip")
     # model = DQN.load("./sb3_models/local/650/650_model_1000000_steps.zip")
-    model = DQN.load("./sb3_models/local/486/486_model_760000_steps.zip")
+    model = DQN.load(model_path+"8818761_model_10_steps.zip")
 
-    # print(model.policy.q_net)
-    state_dict = model.policy.q_net.state_dict()
-    print("\n".join(state_dict.keys()))
-# 
-    new_state_dict = {}
-    for old_key in state_dict.keys():
-        if "q_net" not in old_key:
-            new_key = ".".join(old_key.split(".")[1:])
-        else:
-            new_key = "action_output." + old_key.split(".")[-1]
+    with open(model_path+"config.txt", 'r') as f:
+        config = json.load(f)
+    
+    # print(config)
 
-        new_state_dict[new_key] = state_dict[old_key]
-
-# 
-    print(new_state_dict.keys())
-    torch.save(new_state_dict, "./CUSTOM_SAVE.pt")
-
-
-    # validate(model, config)
+    validate(model, config)
 
