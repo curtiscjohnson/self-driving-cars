@@ -44,11 +44,12 @@ def validate(model, config):
 
 if __name__ == "__main__":
 
-    model_path = "./sb3_models/local/8818761/"
+    model_run_id = 8818761
+    model_path = f"./sb3_models/local/{model_run_id}/"
     # model = DQN.load("./sb3_models/local/650/650_model_760000_steps.zip")
     # model = DQN.load("./sb3_models/local/91/91_model_1000000_steps.zip")
     # model = DQN.load("./sb3_models/local/650/650_model_1000000_steps.zip")
-    model = DQN.load(model_path+"8818761_model_10_steps.zip")
+    model = DQN.load(model_path+f"{model_run_id}_model_10_steps.zip")
 
     with open(model_path+"config.txt", 'r') as f:
         config = json.load(f)
