@@ -60,7 +60,24 @@ class CustomDuckieTownSim(gym.Env):
             HSVimg[mask>0] = (0, 0, 0)
             img = cv2.cvtColor(HSVimg, cv2.COLOR_HSV2BGR)
 
-            return img
+            pic = np.zeros((height, width, 3))
+            xpix, ypix = height, width
+
+            noise = PerlinNoise(octaves=10)            
+            perlin1 = [[noise([i/xpix, j/ypix]) for j in range(xpix)] for i in range(ypix)]
+            pic[:,:,0] = perlin1
+
+            noise = PerlinNoise(octaves=10)            
+            perlin2 = [[noise([i/xpix, j/ypix]) for j in range(xpix)] for i in range(ypix)]
+            pic[:,:,1] = perlin2
+
+            noise = PerlinNoise(octaves=10)            
+            perlin3 = [[noise([i/xpix, j/ypix]) for j in range(xpix)] for i in range(ypix)]
+            pic[:,:,2] = perlin3
+
+            final = img + 2*pic
+
+            return final.astype(np.uint8)
 
     def step(self, action):
         raw_img, reward, self.done = self.sim.step(
