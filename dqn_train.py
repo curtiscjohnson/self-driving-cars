@@ -1,15 +1,11 @@
 from stable_baselines3.common.monitor import Monitor
 from CustomDuckieTownEnv import CustomDuckieTownSim
 from stable_baselines3 import DQN
-from stable_baselines3.dqn import CnnPolicy
-from stable_baselines3.common.vec_env import DummyVecEnv, VecVideoRecorder
 from stable_baselines3.common.callbacks import CheckpointCallback
-from torch import tensor
 import wandb
 from wandb.integration.sb3 import WandbCallback
-from multiprocessing import Manager, Process
-from stable_baselines3.common.vec_env import VecFrameStack
-import random
+from datetime import datetime
+
 
 def make_env(display, config):
     env = CustomDuckieTownSim(
@@ -81,7 +77,8 @@ def train(config, sync2wandb=False):
 
         run.finish()
     else:
-        run = random.randint(0,1000)
+        # Get the run number as a timestamp (subtracting to remove a few digits)
+        run = int(datetime.timestamp(datetime.now()) - 1670000000)
 
         model = DQN(
             config["policy"],
@@ -157,18 +154,6 @@ if __name__ == "__main__":
         "exploration_fraction": 0.1,
         "exploration_final_eps": 0.01,
     }
-
-    # manager = Manager()
-    # jobs = []
-    # numWorkers = 1
-
-    # for i in range(numWorkers):
-    #     p = Process(target=train, args=(config, False))
-    #     jobs.append(p)
-    #     p.start()
-
-    # for proc in jobs:
-    #     proc.join()
 
     train(config, False)
 
