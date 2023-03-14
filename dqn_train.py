@@ -109,11 +109,12 @@ def train(config, sync2wandb=False):
             total_timesteps=config["n_timesteps"],
             tb_log_name=model.tensorboard_log,
             callback=CheckpointCallback(
-                save_freq=10000,
+                save_freq=10,
                 save_path=model_save_path,
                 name_prefix=f"{run}_model",
             ),
         )
+
         # open/create file for writing config
         with open(model_save_path+'config.txt', 'w') as convert_file:
             convert_file.write(json.dumps(config))
@@ -149,7 +150,7 @@ if __name__ == "__main__":
         "n_timesteps": 10,  # sb3 dqn runs go up to 1e7 at most
         "policy": "CnnPolicy",
         "env": "CustomDuckieTown",
-        "actions": [-30,-15, 0, 15, 30],
+        "actions": [-30, 0, 30],
         "camera_settings": cameraSettings,
         "map_parameters": mapParameters,
         "car_parameters": carParameters,
