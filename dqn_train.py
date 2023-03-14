@@ -74,7 +74,7 @@ def train(config, sync2wandb=False):
                 # gradient_save_freq=100,
                 model_save_path=f"sb3_models/wandb/{run.id}",
                 verbose=1,
-                model_save_freq=10,
+                model_save_freq=10000,
                 log="all",
             ),
             # https://github.com/wandb/wandb/blob/72eeaa2c975cddd540a72223fa11c3f2537371a6/wandb/integration/sb3/sb3.py
