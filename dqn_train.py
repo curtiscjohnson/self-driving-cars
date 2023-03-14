@@ -1,15 +1,17 @@
 from stable_baselines3.common.monitor import Monitor
 from CustomDuckieTownEnv import CustomDuckieTownSim
 from stable_baselines3 import DQN
-from stable_baselines3.dqn import CnnPolicy
-from stable_baselines3.common.vec_env import DummyVecEnv, VecVideoRecorder
 from stable_baselines3.common.callbacks import CheckpointCallback
-from torch import tensor
 import wandb
 from wandb.integration.sb3 import WandbCallback
+
+from datetime import datetime
 from multiprocessing import Manager, Process
 from stable_baselines3.common.vec_env import VecFrameStack
 import random
+import json
+
+
 
 def make_env(display, config):
     env = CustomDuckieTownSim(
@@ -80,8 +82,11 @@ def train(config, sync2wandb=False):
         )
 
         run.finish()
+
+        
     else:
-        run = random.randint(0,1000)
+        # Get the run number as a timestamp (subtracting to remove a few digits)
+        run = int(datetime.timestamp(datetime.now()) - 1670000000)
 
         model = DQN(
             config["policy"],
@@ -96,20 +101,23 @@ def train(config, sync2wandb=False):
             gradient_steps=config["gradient_steps"],
             exploration_fraction=config["exploration_fraction"],
             exploration_final_eps=config["exploration_final_eps"],
-            tensorboard_log=f"./sb3_runs/local/{run}",
+            tensorboard_log=f"./sb3_runs/local/{run}/",
             verbose=1,
         )
-
+        model_save_path = f"./sb3_models/local/{run}/"
         final_model = model.learn(
             total_timesteps=config["n_timesteps"],
             tb_log_name=model.tensorboard_log,
             callback=CheckpointCallback(
-                save_freq=10000,
-                save_path=f"./sb3_models/local/{run}",
+                save_freq=10,
+                save_path=model_save_path,
                 name_prefix=f"{run}_model",
             ),
         )
 
+        # open/create file for writing config
+        with open(model_save_path+'config.txt', 'w') as convert_file:
+            convert_file.write(json.dumps(config))
 
 if __name__ == "__main__":
     img_size = (64, 64)
@@ -139,7 +147,7 @@ if __name__ == "__main__":
 
     # taken from https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/dqn.yml
     config = {
-        "n_timesteps": 1e6,  # sb3 dqn runs go up to 1e7 at most
+        "n_timesteps": 10,  # sb3 dqn runs go up to 1e7 at most
         "policy": "CnnPolicy",
         "env": "CustomDuckieTown",
         "actions": [-30, 0, 30],
@@ -157,18 +165,6 @@ if __name__ == "__main__":
         "exploration_fraction": 0.1,
         "exploration_final_eps": 0.01,
     }
-
-    # manager = Manager()
-    # jobs = []
-    # numWorkers = 1
-
-    # for i in range(numWorkers):
-    #     p = Process(target=train, args=(config, False))
-    #     jobs.append(p)
-    #     p.start()
-
-    # for proc in jobs:
-    #     proc.join()
 
     train(config, False)
 

@@ -3,10 +3,13 @@ from RealSense import *
 import numpy as np
 import cv2
 import time as tm
-import lightning_mcqueen as lm
 import torch
 import torch.nn as nn
-from stable_baselines3 import DQN
+import zipfile
+# from stable_baselines3 import DQN
+from utils_network import NatureCNN
+from gym import spaces
+import json
 
 def preprocess_image(BGRimg):
 
@@ -37,10 +40,10 @@ def preprocess_image(BGRimg):
     blackImg[mask>0] = (0,0,255)
 
     # # make true white
-    # lower_white = np.array([26,0,160])
-    # upper_white = np.array([152,60,255])
-    # mask=cv2.inRange(HSVimg,lower_white,upper_white)
-    # blackImg[mask>0] = (255,255,255)
+    lower_white = np.array([26,0,160])
+    upper_white = np.array([152,60,255])
+    mask=cv2.inRange(HSVimg,lower_white,upper_white)
+    blackImg[mask>0] = (255,255,255)
 
     # black out top 1/3 of image
     height, width, depth = blackImg.shape
@@ -51,9 +54,33 @@ def preprocess_image(BGRimg):
 
     return blackImg
 
-def setup_loading_model():
+def setup_loading_model(action_space):
+    N_CHANNELS = 3
+    (HEIGHT, WIDTH) = (64, 64)
+    observation_space = spaces.Box(
+        low=0, high=1, shape=(N_CHANNELS, HEIGHT, WIDTH), dtype=np.uint8
+    )
+    # model = DQN.load("./sb3_models/local/650/650_model_760000_steps.zip")
+    model = NatureCNN(observation_space, action_space, normalized_image=True)
 
-    model = DQN.load("./sb3_models/local/650/650_model_760000_steps.zip")
+    archive = zipfile.ZipFile("/home/car/Desktop/self-driving-cars/sb3_models/local/650/650_model_760000_steps.zip", 'r')
+    path = archive.extract('policy.pth')
+    state_dict = torch.load(path)
+    # print('\nState Dict:', state_dict.keys(), '\n')
+
+    new_state_dict = {}
+    for old_key in state_dict.keys():
+        if "q_net.q_net" in old_key:
+          new_key = "action_output." + old_key.split(".")[-1]
+        elif "q_net_target" not in old_key:
+          new_key = ".".join(old_key.split(".")[2:])
+  
+        new_state_dict[new_key] = state_dict[old_key]
+    
+    # print('\nNew State Dict:', new_state_dict.keys(), '\n')
+    model.load_state_dict(new_state_dict)
+
+    return model
 
 # path = r'/fsg/hps22/self-driving-cars/testimg.jpg'
 # preprocessedImg = preprocess_image(cv2.imread(path))
@@ -62,8 +89,11 @@ def setup_loading_model():
 # cv2.destroyAllWindows()
 
 # load in RL model
-model = setup_loading_model()
-action_space = [-30, 0, 30]
+model_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/650/'
+with open(model_path+"config.txt", 'r') as f:
+  config = json.load(f)
+action_space = config['actions']
+model = setup_loading_model(action_space)
 
 # initialize realsense camera
 enableDepth = True
@@ -79,7 +109,7 @@ Car.pid(1)
 (time_, rgb, depth, accel, gyro) = rs.getData(False)
 
 # start car
-fastSpeed = .8
+fastSpeed = 0.8
 Car.drive(fastSpeed)
 
 # driving loop
@@ -94,8 +124,13 @@ while True:
   preprocessedImg = preprocess_image(img)
   resizedImg = cv2.resize(preprocessedImg, (64, 64))
 
+  networkImg = np.moveaxis(resizedImg, 2, 0)
+#   print(resizedImg.shape)
+#   print(model)
+
   # get steering angle
-  action_idx, _ = model.predict(resizedImg, deterministic=True)    
+#   action_idx, _ = model.predict(resizedImg, deterministic=True)  
+  action_idx = model(torch.from_numpy(networkImg/255).float()).max(0)[1].view(1,1)  
   angle = action_space[action_idx]
 
   # apply steering angle to car

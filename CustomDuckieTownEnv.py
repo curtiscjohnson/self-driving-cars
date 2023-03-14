@@ -69,11 +69,11 @@ class CustomDuckieTownSim(gym.Env):
         self.info = {}
 
         observation = self.preprocess_img(raw_img)
-        cv2.namedWindow('observation', cv2.WINDOW_NORMAL)
-        cv2.namedWindow('raw', cv2.WINDOW_NORMAL)
-        cv2.imshow('observation', observation)
-        cv2.imshow('raw', raw_img)
-        cv2.waitKey(0)
+        # cv2.namedWindow('observation', cv2.WINDOW_NORMAL)
+        # cv2.namedWindow('raw', cv2.WINDOW_NORMAL)
+        # cv2.imshow('observation', observation)
+        # cv2.imshow('raw', raw_img)
+        # cv2.waitKey(0)
         return observation, reward, self.done, self.info
 
     def reset(self):
