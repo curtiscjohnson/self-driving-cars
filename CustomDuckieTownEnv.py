@@ -4,7 +4,7 @@ from gym import spaces
 from simulation import Simulator
 import random
 import cv2
-from perlin_noise import PerlinNoise
+from img_utils import preprocess_image as image_process
 
 
 class CustomDuckieTownSim(gym.Env):
@@ -48,38 +48,35 @@ class CustomDuckieTownSim(gym.Env):
             # also maybe stacking a short sequence of images too? - https://stable-baselines3.readthedocs.io/en/master/guide/vec_envs.html#vecframestack
             # !SB3 CNNPolicy normalizes images by default.
 
+            processed_img = image_process(raw_img, sim=True)
             # black out top 1/3 of image
-            height, width, depth = raw_img.shape
-            raw_img[0:height // 3,:,:] = (0, 0, 0)
+            # height, width, depth = raw_img.shape
+            # raw_img[0:height // 3,:,:] = (0, 0, 0)
 
-            HSVimg = cv2.cvtColor(raw_img, cv2.COLOR_BGR2HSV)
+            # HSVimg = cv2.cvtColor(raw_img, cv2.COLOR_BGR2HSV)
 
-            # erase white
-            lower_white = np.array([0,0,168])
-            upper_white = np.array([172,112,255])
-            mask=cv2.inRange(HSVimg,lower_white,upper_white)
-            HSVimg[mask>0] = (0, 0, 0)
-            img = cv2.cvtColor(HSVimg, cv2.COLOR_HSV2BGR)
+            # # erase white
+            # lower_white = np.array([0,0,168])
+            # upper_white = np.array([172,112,255])
+            # mask=cv2.inRange(HSVimg,lower_white,upper_white)
+            # HSVimg[mask>0] = (0, 0, 0)
+            # img = cv2.cvtColor(HSVimg, cv2.COLOR_HSV2BGR)
 
             # pic = np.zeros((height, width, 3))
-            # xpix, ypix = height, width
+            xpix, ypix, channels = processed_img.shape
 
-            # noise = PerlinNoise(octaves=10)            
-            # perlin1 = [[noise([i/xpix, j/ypix]) for j in range(xpix)] for i in range(ypix)]
-            # pic[:,:,0] = perlin1
+            # Add random yellow squares to the image
+            
+            num_randpoints = 2
+            x_points = np.random.randint(xpix//3, xpix, size=num_randpoints)
+            y_points = np.random.randint(ypix//3, ypix, size=num_randpoints)
+            for i in range(0,num_randpoints):
+                size = np.random.randint(0,2)
+                point = (x_points[i], y_points[i])
+                point_2 = (x_points[i]+size, y_points[i]+size)
+                cv2.rectangle(processed_img, point, point_2, (0, 255, 255), -1)
 
-            # noise = PerlinNoise(octaves=10)            
-            # perlin2 = [[noise([i/xpix, j/ypix]) for j in range(xpix)] for i in range(ypix)]
-            # pic[:,:,1] = perlin2
-
-            # noise = PerlinNoise(octaves=10)            
-            # perlin3 = [[noise([i/xpix, j/ypix]) for j in range(xpix)] for i in range(ypix)]
-            # pic[:,:,2] = perlin3
-
-            # final = img + 2*pic
-
-            # return final.astype(np.uint8)
-            return img
+            return processed_img.astype(np.uint8)
 
     def step(self, action):
         raw_img, reward, self.done = self.sim.step(
@@ -88,11 +85,11 @@ class CustomDuckieTownSim(gym.Env):
         self.info = {}
 
         observation = self.preprocess_img(raw_img)
-        # cv2.namedWindow('observation', cv2.WINDOW_NORMAL)
-        # cv2.namedWindow('raw', cv2.WINDOW_NORMAL)
-        # cv2.imshow('observation', observation)
-        # cv2.imshow('raw', raw_img)
-        # cv2.waitKey(0)
+        cv2.namedWindow('observation', cv2.WINDOW_NORMAL)
+        cv2.namedWindow('raw', cv2.WINDOW_NORMAL)
+        cv2.imshow('observation', observation)
+        cv2.imshow('raw', raw_img)
+        cv2.waitKey(0)
         return observation, reward, self.done, self.info
 
     def reset(self):
