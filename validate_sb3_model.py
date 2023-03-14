@@ -10,6 +10,7 @@ from wandb.integration.sb3 import WandbCallback
 from multiprocessing import Manager, Process
 from stable_baselines3.common.vec_env import VecFrameStack
 import random
+import torch
 
 def make_env(display, config):
     env = CustomDuckieTownSim(
@@ -41,6 +42,7 @@ def validate(model, config):
     while True:
         action, _states = model.predict(obs, deterministic=True)
         obs, reward, done, info = env.step(action)
+        print(obs.shape)
         if done:
             obs = env.reset()
 
@@ -77,7 +79,7 @@ if __name__ == "__main__":
         "n_timesteps": 1e6,  # sb3 dqn runs go up to 1e7 at most
         "policy": "CnnPolicy",
         "env": "CustomDuckieTown",
-        "actions": [-30, 0, 30],
+        "actions": [-30,-15, 0, 15, 30],
         "camera_settings": cameraSettings,
         "map_parameters": mapParameters,
         "car_parameters": carParameters,
@@ -94,6 +96,27 @@ if __name__ == "__main__":
     }
 
     # model = DQN.load("./sb3_models/local/650/650_model_760000_steps.zip")
-    model = DQN.load("./sb3_models/local/91/91_model_1000000_steps.zip")
-    validate(model, config)
+    # model = DQN.load("./sb3_models/local/91/91_model_1000000_steps.zip")
+    # model = DQN.load("./sb3_models/local/650/650_model_1000000_steps.zip")
+    model = DQN.load("./sb3_models/local/486/486_model_760000_steps.zip")
+
+    # print(model.policy.q_net)
+    state_dict = model.policy.q_net.state_dict()
+    print("\n".join(state_dict.keys()))
+# 
+    new_state_dict = {}
+    for old_key in state_dict.keys():
+        if "q_net" not in old_key:
+            new_key = ".".join(old_key.split(".")[1:])
+        else:
+            new_key = "action_output." + old_key.split(".")[-1]
+
+        new_state_dict[new_key] = state_dict[old_key]
+
+# 
+    print(new_state_dict.keys())
+    torch.save(new_state_dict, "./CUSTOM_SAVE.pt")
+
+
+    # validate(model, config)
 

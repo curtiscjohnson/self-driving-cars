@@ -89,8 +89,8 @@ cv.createTrackbar(high_V_name, window_detection_name , high_V, max_value, on_hig
 
 while True:
     ## [while]
-    ret, frame = cap.read()
-    # frame = cv.imread('./sim_testing_images/straight.png')
+    # ret, frame = cap.read()
+    frame = cv.imread('./sim_testing_images/64by64sim_image.png')
     if frame is None:
         break
 
