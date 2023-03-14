@@ -17,17 +17,8 @@ def preprocess_image(BGRimg):
     HSVimg = cv2.bilateralFilter(HSVimg,9,75,75)
     # HSVimg = cv2.GaussianBlur(HSVimg, (5,5),0)
     blackImg = np.zeros(HSVimg.shape, dtype = np.uint8)
-
-    # make everything we don't care about black
-    lower_thresh = np.array([0, 0, 203])
-    upper_thresh = np.array([180, 255, 255])
-    mask=cv2.inRange(HSVimg,lower_thresh,upper_thresh)
-    BGRimg[mask==0]=(0,0,0)
    
     # make true yellow
-    # 15, 100
-    # 89, 255
-    # 124, 255
     lower_yellow = np.array([15,89,124])
     upper_yellow = np.array([100,255,255])
     mask=cv2.inRange(HSVimg,lower_yellow,upper_yellow)
@@ -38,12 +29,6 @@ def preprocess_image(BGRimg):
     upper_red = np.array([5,255,255])
     mask=cv2.inRange(HSVimg,lower_red,upper_red)
     blackImg[mask>0] = (0,0,255)
-
-    # # make true white
-    lower_white = np.array([26,0,160])
-    upper_white = np.array([152,60,255])
-    mask=cv2.inRange(HSVimg,lower_white,upper_white)
-    blackImg[mask>0] = (255,255,255)
 
     # black out top 1/3 of image
     height, width, depth = blackImg.shape
@@ -63,7 +48,7 @@ def setup_loading_model(action_space):
     # model = DQN.load("./sb3_models/local/650/650_model_760000_steps.zip")
     model = NatureCNN(observation_space, action_space, normalized_image=True)
 
-    archive = zipfile.ZipFile("/home/car/Desktop/self-driving-cars/sb3_models/local/650/650_model_760000_steps.zip", 'r')
+    archive = zipfile.ZipFile("/home/car/Desktop/self-driving-cars/sb3_models/local/612/612_model_220000_steps.zip", 'r')
     path = archive.extract('policy.pth')
     state_dict = torch.load(path)
     # print('\nState Dict:', state_dict.keys(), '\n')
@@ -89,10 +74,11 @@ def setup_loading_model(action_space):
 # cv2.destroyAllWindows()
 
 # load in RL model
-model_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/650/'
-with open(model_path+"config.txt", 'r') as f:
-  config = json.load(f)
-action_space = config['actions']
+model_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/612/'
+# with open(model_path+"config.txt", 'r') as f:
+#   config = json.load(f)
+# action_space = config['actions']
+action_space = [-30, 0, 30]
 model = setup_loading_model(action_space)
 
 # initialize realsense camera
@@ -109,7 +95,7 @@ Car.pid(1)
 (time_, rgb, depth, accel, gyro) = rs.getData(False)
 
 # start car
-fastSpeed = 0.8
+fastSpeed = 0.0
 Car.drive(fastSpeed)
 
 # driving loop
@@ -121,15 +107,12 @@ while True:
   (time_, img, depth, accel, gyro) = rs.getData(False)
 
   # prepare image to go into network
-  preprocessedImg = preprocess_image(img)
-  resizedImg = cv2.resize(preprocessedImg, (64, 64))
+  resizedImg = cv2.resize(img, (64, 64))
+  preprocessedImg = preprocess_image(resizedImg)
 
-  networkImg = np.moveaxis(resizedImg, 2, 0)
-#   print(resizedImg.shape)
-#   print(model)
+  networkImg = np.moveaxis(preprocessedImg, 2, 0)
 
   # get steering angle
-#   action_idx, _ = model.predict(resizedImg, deterministic=True)  
   action_idx = model(torch.from_numpy(networkImg/255).float()).max(0)[1].view(1,1)  
   angle = action_space[action_idx]
 
@@ -138,7 +121,7 @@ while True:
 
   # display what camera sees
   cv2.namedWindow("car", cv2.WINDOW_NORMAL)
-  cv2.imshow("car", resizedImg)
+  cv2.imshow("car", preprocessedImg)
 
   if (cv2.waitKey(1) == ord('q')):
       cv2.destroyAllWindows()
