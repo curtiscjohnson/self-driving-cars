@@ -44,8 +44,8 @@ def validate(model, config):
 
 if __name__ == "__main__":
 
-    model_run_id = 650
-    steps = 760000
+    model_run_id = 8826224
+    steps = 4600000
     model_path = f"./sb3_models/local/{model_run_id}/"
     # model = DQN.load("./sb3_models/local/650/650_model_760000_steps.zip")
     # model = DQN.load("./sb3_models/local/91/91_model_1000000_steps.zip")
