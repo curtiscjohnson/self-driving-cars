@@ -135,7 +135,7 @@ class Simulator:
             if distToCenter < -60 or distToCenter > 60:
                 done = True
             else:
-                reward += .5 / (np.abs(0 - distToCenter) + 1)
+                reward += .5 / (np.abs(10 - distToCenter) + 1)
                 reward += .5 / (np.abs(np.degrees(bearingOffset)) + 1)
 
         reward = float(reward)

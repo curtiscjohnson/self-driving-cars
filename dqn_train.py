@@ -19,6 +19,7 @@ def make_env(display, config):
         config["map_parameters"],
         config["car_parameters"],
         config["actions"],
+        config["max_episode_length"],
         display,
     )
     env = Monitor(env)  # record stats such as returns
@@ -109,7 +110,7 @@ def train(config, sync2wandb=False):
             total_timesteps=config["n_timesteps"],
             tb_log_name=model.tensorboard_log,
             callback=CheckpointCallback(
-                save_freq=10,
+                save_freq=1e5,
                 save_path=model_save_path,
                 name_prefix=f"{run}_model",
             ),
@@ -120,7 +121,7 @@ def train(config, sync2wandb=False):
             convert_file.write(json.dumps(config))
 
 if __name__ == "__main__":
-    img_size = (64, 64)
+    img_size = (128, 72)
     cameraSettings = {
         # "resolution": (1920, 1080),
         "resolution": img_size,
@@ -147,7 +148,7 @@ if __name__ == "__main__":
 
     # taken from https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/dqn.yml
     config = {
-        "n_timesteps": 10,  # sb3 dqn runs go up to 1e7 at most
+        "n_timesteps": 5e6,  # sb3 dqn runs go up to 1e7 at most
         "policy": "CnnPolicy",
         "env": "CustomDuckieTown",
         "actions": [-30, 0, 30],
@@ -164,6 +165,7 @@ if __name__ == "__main__":
         "gradient_steps": 1,
         "exploration_fraction": 0.1,
         "exploration_final_eps": 0.01,
+        "max_episode_length":1000,
     }
 
     train(config, False)

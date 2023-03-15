@@ -23,10 +23,10 @@ def preprocess_image(BGRimg, sim=False):
 
     # black out top 1/3 of image
     height, width, depth = blackImg.shape
-    blackImg[0:height//3,:,:] = (0, 0, 0)
+    blackImg[0:height//2,:,:] = (0, 0, 0)
 
     #black out bottom strip of image
     if not sim:
-        blackImg[height - 10:height, :, :] = (0, 0, 0)
+        blackImg[height - 1:height, :, :] = (0, 0, 0)
 
     return blackImg
