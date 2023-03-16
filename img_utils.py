@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 
-def preprocess_image(BGRimg, sim=False, blackAndWhite=False):
+def preprocess_image(BGRimg, removeBottomStrip=False, blackAndWhite=False):
 
     if blackAndWhite:
         originalImage = BGRimg
@@ -42,7 +42,7 @@ def preprocess_image(BGRimg, sim=False, blackAndWhite=False):
         blackImg[0:height//3,:,:] = (0, 0, 0)
 
         #black out bottom strip of image
-        if not sim:
+        if not removeBottomStrip:
             blackImg[height - 1:height, :, :] = (0, 0, 0)
 
     return blackImg

@@ -14,6 +14,7 @@ def make_env(display, config):
         config["car_parameters"],
         config["actions"],
         config["max_episode_length"],
+        config["yellow_image_noise"],
         display,
     )
     env = Monitor(env)  # record stats such as returns

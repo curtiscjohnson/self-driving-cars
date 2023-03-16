@@ -166,6 +166,8 @@ if __name__ == "__main__":
         "exploration_fraction": 0.1,
         "exploration_final_eps": 0.01,
         "max_episode_length":1000,
+        "yellow_image_noise":True,
+        "notes":"add notes here"
     }
 
     train(config, False)

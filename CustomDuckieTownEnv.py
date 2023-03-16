@@ -19,6 +19,7 @@ class CustomDuckieTownSim(gym.Env):
         car_parameters,
         action_angles: list = [-30, 0, 30],
         max_episode_length = 1000,
+        addYellowNoise = False,
         display=False,
     ):
         super().__init__()
@@ -37,13 +38,18 @@ class CustomDuckieTownSim(gym.Env):
 
         # Example for using image as input (channel-first; channel-last also works):
         N_CHANNELS = 3
-        (HEIGHT, WIDTH) = self.camera_settings["resolution"]
+
+        # (HEIGHT, WIDTH) = self.camera_settings["resolution"]
+        (WIDTH, HEIGHT) = self.camera_settings["resolution"]
+
+
         self.observation_space = spaces.Box(
             low=0, high=255, shape=(HEIGHT, WIDTH, N_CHANNELS), dtype=np.uint8
         )
         # ! I'm pretty sure observation space is supposed to be the features the agent has access to -- the preprocessed image.
         self.num_steps_taken = 0
         self.max_episode_length = max_episode_length
+        self.addYellowNoise = addYellowNoise
 
     def preprocess_img(self, raw_img):
             # some feature engineering to separate out red/white/yellow was done in that paper
@@ -51,21 +57,19 @@ class CustomDuckieTownSim(gym.Env):
             # also maybe stacking a short sequence of images too? - https://stable-baselines3.readthedocs.io/en/master/guide/vec_envs.html#vecframestack
             # !SB3 CNNPolicy normalizes images by default.
 
-            processed_img = image_process(raw_img, sim=True, blackAndWhite=True)
+            processed_img = image_process(raw_img, removeBottomStrip=True, blackAndWhite=True)
 
-            # pic = np.zeros((height, width, 3))
-            xpix, ypix, channels = processed_img.shape
-
+            if self.addYellowNoise:
             # Add random yellow squares to the image
-            
-            # num_randpoints = 2
-            # x_points = np.random.randint(xpix//3, xpix, size=num_randpoints)
-            # y_points = np.random.randint(ypix//3, ypix, size=num_randpoints)
-            # for i in range(0,num_randpoints):
-            #     size = np.random.randint(0,2)
-            #     point = (x_points[i], y_points[i])
-            #     point_2 = (x_points[i]+size, y_points[i]+size)
-            #     cv2.rectangle(processed_img, point, point_2, (0, 255, 255), -1)
+                xpix, ypix, channels = processed_img.shape
+                num_randpoints = 2
+                x_points = np.random.randint(xpix//3, xpix, size=num_randpoints)
+                y_points = np.random.randint(ypix//3, ypix, size=num_randpoints)
+                for i in range(0,num_randpoints):
+                    size = np.random.randint(0,2)
+                    point = (x_points[i], y_points[i])
+                    point_2 = (x_points[i]+size, y_points[i]+size)
+                    cv2.rectangle(processed_img, point, point_2, (0, 255, 255), -1)
 
             return processed_img.astype(np.uint8)
 
