@@ -13,6 +13,7 @@ def make_env(display, config):
         config["map_parameters"],
         config["car_parameters"],
         config["actions"],
+        config["max_episode_length"],
         display,
     )
     env = Monitor(env)  # record stats such as returns
@@ -44,7 +45,7 @@ def validate(model, config):
 
 if __name__ == "__main__":
 
-    model_run_id = 8826224
+    model_run_id = 8904922
     steps = 4600000
     model_path = f"./sb3_models/local/{model_run_id}/"
     # model = DQN.load("./sb3_models/local/650/650_model_760000_steps.zip")
