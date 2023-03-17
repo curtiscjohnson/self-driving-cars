@@ -4,10 +4,12 @@ import numpy as np
 
 def preprocess_image(BGRimg, removeBottomStrip=False, blackAndWhite=False, addYellowNoise=False, use3imgBuffer=False):
 
-    #! BGR image is width x height x channels
+    BGRimg = cv2.bilateralFilter(BGRimg,5,75,75)
+
+    #! BGRimg comes in as height x width x channels
     if addYellowNoise:
         # Add random yellow squares to the image
-        xpix, ypix, channels = BGRimg.shape
+        ypix, xpix, channels = BGRimg.shape
         num_randpoints = 2
         x_points = np.random.randint(xpix//3, xpix, size=num_randpoints)
         y_points = np.random.randint(ypix//3, ypix, size=num_randpoints)
@@ -26,10 +28,11 @@ def preprocess_image(BGRimg, removeBottomStrip=False, blackAndWhite=False, addYe
         originalImage = BGRimg
         grayImage = cv2.cvtColor(originalImage, cv2.COLOR_BGR2GRAY)
         
-        (thresh, blackAndWhiteImage) = cv2.threshold(grayImage, 127, 255, cv2.THRESH_BINARY)
+        (thresh, blackAndWhiteImage) = cv2.threshold(grayImage, 10, 255, cv2.THRESH_BINARY)
 
         if use3imgBuffer:
             return blackAndWhiteImage
+
         blackImg = np.zeros(BGRimg.shape, dtype = np.uint8)
         blackImg[:,:,0] = blackAndWhiteImage
         blackImg[:,:,1] = blackAndWhiteImage

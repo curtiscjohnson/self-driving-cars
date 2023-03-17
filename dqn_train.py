@@ -23,6 +23,7 @@ def make_env(display, config):
         config["yellow_image_noise"],
         config["blackAndWhite"],
         config["use3imgBuffer"],
+        config["randomizeCameraParamsOnReset"],
         display,
     )
     env = Monitor(env)  # record stats such as returns
@@ -125,14 +126,15 @@ def train(config, sync2wandb=False):
             convert_file.write(json.dumps(config))
 
 if __name__ == "__main__":
-    img_size = (128,72) #! must be (cols, rows) i.e. (width, height)
+    shrinkFactor = 10
+    img_size = (1920//shrinkFactor,1080//shrinkFactor) #! must be (cols, rows) i.e. (width, height)
     cameraSettings = {
         # "resolution": (1920, 1080),
         "resolution": img_size,
         "fov": {"diagonal": 77},  # realsense diagonal fov is 77 degrees IIRC
         "angle": {
             "roll": 0,
-            "pitch": 0,
+            "pitch": -5,
             "yaw": 0,
         },  # don't go too crazy with these, my code should be good up to like... 45 degrees probably? But the math gets unstable
         # "angle": {"roll": 13, "pitch": 30, "yaw": 30}, # don't go too crazy with these, my code should be good up to like... 45 degrees probably? But the math gets unstable
@@ -170,9 +172,10 @@ if __name__ == "__main__":
         "exploration_fraction": 0.1,
         "exploration_final_eps": 0.01,
         "max_episode_length":2000,
-        "yellow_image_noise":True,
+        "yellow_image_noise":False,
         "blackAndWhite": True,
         "use3imgBuffer":True, #! only works if blackAndWhite is true
+        "randomizeCameraParamsOnReset":False,
         "notes":"add notes here"
     }
 
