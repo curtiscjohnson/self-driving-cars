@@ -20,6 +20,9 @@ def make_env(display, config):
         config["car_parameters"],
         config["actions"],
         config["max_episode_length"],
+        config["yellow_image_noise"],
+        config["blackAndWhite"],
+        config["use3imgBuffer"],
         display,
     )
     env = Monitor(env)  # record stats such as returns
@@ -105,6 +108,7 @@ def train(config, sync2wandb=False):
             tensorboard_log=f"./sb3_runs/local/{run}/",
             verbose=1,
         )
+            
         model_save_path = f"./sb3_models/local/{run}/"
         final_model = model.learn(
             total_timesteps=config["n_timesteps"],
@@ -121,7 +125,7 @@ def train(config, sync2wandb=False):
             convert_file.write(json.dumps(config))
 
 if __name__ == "__main__":
-    img_size = (128, 72)
+    img_size = (128,72) #! must be (cols, rows) i.e. (width, height)
     cameraSettings = {
         # "resolution": (1920, 1080),
         "resolution": img_size,
@@ -165,8 +169,10 @@ if __name__ == "__main__":
         "gradient_steps": 1,
         "exploration_fraction": 0.1,
         "exploration_final_eps": 0.01,
-        "max_episode_length":1000,
+        "max_episode_length":2000,
         "yellow_image_noise":True,
+        "blackAndWhite": True,
+        "use3imgBuffer":True, #! only works if blackAndWhite is true
         "notes":"add notes here"
     }
 

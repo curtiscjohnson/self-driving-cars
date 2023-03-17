@@ -2,7 +2,25 @@ import cv2
 import numpy as np
 
 
-def preprocess_image(BGRimg, removeBottomStrip=False, blackAndWhite=False):
+def preprocess_image(BGRimg, removeBottomStrip=False, blackAndWhite=False, addYellowNoise=False, use3imgBuffer=False):
+
+    #! BGR image is width x height x channels
+    if addYellowNoise:
+        # Add random yellow squares to the image
+        xpix, ypix, channels = BGRimg.shape
+        num_randpoints = 2
+        x_points = np.random.randint(xpix//3, xpix, size=num_randpoints)
+        y_points = np.random.randint(ypix//3, ypix, size=num_randpoints)
+        for i in range(0,num_randpoints):
+            size = np.random.randint(0,2)
+            point = (x_points[i], y_points[i])
+            point_2 = (x_points[i]+size, y_points[i]+size)
+
+            #not sure why this is needed, but works.
+            #see https://stackoverflow.com/questions/23830618/python-opencv-typeerror-layout-of-the-output-array-incompatible-with-cvmat
+            BGRimg = np.ascontiguousarray(BGRimg, dtype=np.uint8)
+
+            cv2.rectangle(BGRimg, point, point_2, (0, 255, 255), -1)
 
     if blackAndWhite:
         originalImage = BGRimg
@@ -10,10 +28,13 @@ def preprocess_image(BGRimg, removeBottomStrip=False, blackAndWhite=False):
         
         (thresh, blackAndWhiteImage) = cv2.threshold(grayImage, 127, 255, cv2.THRESH_BINARY)
 
+        if use3imgBuffer:
+            return blackAndWhiteImage
         blackImg = np.zeros(BGRimg.shape, dtype = np.uint8)
         blackImg[:,:,0] = blackAndWhiteImage
         blackImg[:,:,1] = blackAndWhiteImage
         blackImg[:,:,2] = blackAndWhiteImage
+
 
         # cv2.imshow("car", blackImg)
         # cv2.waitKey(0)

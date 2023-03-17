@@ -5,6 +5,7 @@ from simulation import Simulator
 import random
 import cv2
 from img_utils import preprocess_image as image_process
+from collections import deque
 
 
 class CustomDuckieTownSim(gym.Env):
@@ -20,6 +21,8 @@ class CustomDuckieTownSim(gym.Env):
         action_angles: list = [-30, 0, 30],
         max_episode_length = 1000,
         addYellowNoise = False,
+        blackAndWhite = False,
+        use3imgBuffer=False,
         display=False,
     ):
         super().__init__()
@@ -44,12 +47,16 @@ class CustomDuckieTownSim(gym.Env):
 
 
         self.observation_space = spaces.Box(
-            low=0, high=255, shape=(HEIGHT, WIDTH, N_CHANNELS), dtype=np.uint8
+            low=0, high=255, shape=(WIDTH, HEIGHT, N_CHANNELS), dtype=np.uint8
         )
         # ! I'm pretty sure observation space is supposed to be the features the agent has access to -- the preprocessed image.
         self.num_steps_taken = 0
         self.max_episode_length = max_episode_length
         self.addYellowNoise = addYellowNoise
+        self.blackAndWhite = blackAndWhite
+        self.use3imgBuffer = use3imgBuffer
+        self.initial_obs = [np.zeros(self.camera_settings["resolution"])] * 3
+        self.observation_buffer = deque(self.initial_obs, maxlen=3)
 
     def preprocess_img(self, raw_img):
             # some feature engineering to separate out red/white/yellow was done in that paper
@@ -57,19 +64,13 @@ class CustomDuckieTownSim(gym.Env):
             # also maybe stacking a short sequence of images too? - https://stable-baselines3.readthedocs.io/en/master/guide/vec_envs.html#vecframestack
             # !SB3 CNNPolicy normalizes images by default.
 
-            processed_img = image_process(raw_img, removeBottomStrip=True, blackAndWhite=True)
-
-            if self.addYellowNoise:
-            # Add random yellow squares to the image
-                xpix, ypix, channels = processed_img.shape
-                num_randpoints = 2
-                x_points = np.random.randint(xpix//3, xpix, size=num_randpoints)
-                y_points = np.random.randint(ypix//3, ypix, size=num_randpoints)
-                for i in range(0,num_randpoints):
-                    size = np.random.randint(0,2)
-                    point = (x_points[i], y_points[i])
-                    point_2 = (x_points[i]+size, y_points[i]+size)
-                    cv2.rectangle(processed_img, point, point_2, (0, 255, 255), -1)
+            processed_img = image_process(
+                raw_img,
+                removeBottomStrip=True,
+                blackAndWhite=self.blackAndWhite,
+                addYellowNoise=self.addYellowNoise,
+                use3imgBuffer=self.use3imgBuffer,
+            )
 
             return processed_img.astype(np.uint8)
 
@@ -78,8 +79,12 @@ class CustomDuckieTownSim(gym.Env):
             steer=self.action_angles[action], speed=1.0, display=self.display
         )
         self.info = {}
+        #! sim.step() returns raw image as height x width x channels. The convention we are using is width x height x channels. Thus swapping dims here.
+        raw_img = np.moveaxis(raw_img, 0,1)
 
         observation = self.preprocess_img(raw_img)
+        self.observation_buffer.append(observation)
+
         # cv2.namedWindow('observation', cv2.WINDOW_NORMAL)
         # cv2.namedWindow('raw', cv2.WINDOW_NORMAL)
         # cv2.imshow('observation', observation)
@@ -91,7 +96,8 @@ class CustomDuckieTownSim(gym.Env):
             self.done = True
             reward = 0
 
-        return observation, reward, self.done, self.info
+        #! somehow the 2nd entry of observation buffer is getting flipped... must be the observation coming out of preprocess_img(). True.
+        return np.dstack(self.observation_buffer), reward, self.done, self.info
 
     def reset(self):
         """Reset gets called right after init typically.
@@ -103,6 +109,7 @@ class CustomDuckieTownSim(gym.Env):
 
         self.done = False
         self.num_steps_taken = 0
+        self.observation_buffer = deque(self.initial_obs, maxlen=3)
 
         self.sim = Simulator(cameraSettings=self.camera_settings)
 
@@ -163,8 +170,12 @@ class CustomDuckieTownSim(gym.Env):
             ),
         )
 
-        where, facing = self.sim.RealSense.parent.ackermann.pose()
-        initial_img = self.sim.RealSense.camera.getImage(where, facing)
+        # where, facing = self.sim.RealSense.parent.ackermann.pose()
+        # initial_img = self.sim.RealSense.camera.getImage(where, facing)
+        # print(f"initial_img.shape: {initial_img.shape}")
+        # observation = self.preprocess_img(initial_img)
+        # print(f"observation.shape: {observation.shape}")
+        # self.observation_buffer.append(observation)
 
-        observation = self.preprocess_img(initial_img)
-        return observation  # reward, done, info can't be included
+        
+        return np.dstack(self.initial_obs) # reward, done, info can't be included
