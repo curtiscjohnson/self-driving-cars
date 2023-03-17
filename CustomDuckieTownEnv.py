@@ -91,11 +91,11 @@ class CustomDuckieTownSim(gym.Env):
         if self.use3imgBuffer:
             self.observation_buffer.append(observation)
 
-        cv2.namedWindow('observation', cv2.WINDOW_NORMAL)
-        cv2.imshow('observation', observation)
-        cv2.namedWindow('raw', cv2.WINDOW_NORMAL)
-        cv2.imshow('raw', raw_img)
-        cv2.waitKey(0)
+        # cv2.namedWindow('observation', cv2.WINDOW_NORMAL)
+        # cv2.imshow('observation', observation)
+        # cv2.namedWindow('raw', cv2.WINDOW_NORMAL)
+        # cv2.imshow('raw', raw_img)
+        # cv2.waitKey(0)
 
         self.num_steps_taken += 1
         if self.num_steps_taken > self.max_episode_length:

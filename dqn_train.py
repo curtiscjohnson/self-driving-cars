@@ -12,7 +12,6 @@ import random
 import json
 
 
-
 def make_env(display, config):
     env = CustomDuckieTownSim(
         config["camera_settings"],
@@ -27,19 +26,6 @@ def make_env(display, config):
         display,
     )
     env = Monitor(env)  # record stats such as returns
-
-    # Frame-stacking with 4 frames
-    # env = VecFrameStack(env, n_stack=4)
-
-    # env = DummyVecEnv([make_env])
-
-    # env = VecVideoRecorder(
-    #     env,
-    #     f"videos/{run.id}",For some reason I can't get on github, but I'm pretty sure it's in the tile generator file. Definitely in the simulation folder, one of the tile classes
-
-    #     record_video_trigger=lambda x: x % 2000 == 0,
-    #     video_length=200
-    #
     return env
 
 
@@ -171,12 +157,12 @@ if __name__ == "__main__":
         "gradient_steps": 1,
         "exploration_fraction": 0.1,
         "exploration_final_eps": 0.01,
-        "max_episode_length":2000,
-        "yellow_image_noise":True,
+        "max_episode_length":1800, #60 seconds of driving without crashing, hopefully not memorize one loop so much.
+        "yellow_image_noise":False,
         "blackAndWhite": True,
         "use3imgBuffer":True, #! only works if blackAndWhite is true
         "randomizeCameraParamsOnReset":True,
-        "notes":"add notes here"
+        "notes":""
     }
 
     train(config, False)
