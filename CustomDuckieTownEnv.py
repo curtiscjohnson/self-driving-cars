@@ -23,6 +23,7 @@ class CustomDuckieTownSim(gym.Env):
         addYellowNoise = False,
         blackAndWhite = False,
         use3imgBuffer=False,
+        randomizeCameraParamsOnReset=False,
         display=False,
     ):
         super().__init__()
@@ -47,7 +48,7 @@ class CustomDuckieTownSim(gym.Env):
 
 
         self.observation_space = spaces.Box(
-            low=0, high=255, shape=(WIDTH, HEIGHT, N_CHANNELS), dtype=np.uint8
+            low=0, high=255, shape=(HEIGHT, WIDTH, N_CHANNELS), dtype=np.uint8
         )
         # ! I'm pretty sure observation space is supposed to be the features the agent has access to -- the preprocessed image.
         self.num_steps_taken = 0
@@ -55,8 +56,12 @@ class CustomDuckieTownSim(gym.Env):
         self.addYellowNoise = addYellowNoise
         self.blackAndWhite = blackAndWhite
         self.use3imgBuffer = use3imgBuffer
-        self.initial_obs = [np.zeros(self.camera_settings["resolution"])] * 3
-        self.observation_buffer = deque(self.initial_obs, maxlen=3)
+        self.randomizeCameraParamOnReset = randomizeCameraParamsOnReset
+        if use3imgBuffer:
+            self.initial_obs = [np.zeros((HEIGHT,WIDTH))] * 3
+            self.observation_buffer = deque(self.initial_obs, maxlen=3)
+        else:
+            self.initial_obs = np.zeros((HEIGHT, WIDTH,N_CHANNELS))
 
     def preprocess_img(self, raw_img):
             # some feature engineering to separate out red/white/yellow was done in that paper
@@ -79,25 +84,28 @@ class CustomDuckieTownSim(gym.Env):
             steer=self.action_angles[action], speed=1.0, display=self.display
         )
         self.info = {}
-        #! sim.step() returns raw image as height x width x channels. The convention we are using is width x height x channels. Thus swapping dims here.
-        raw_img = np.moveaxis(raw_img, 0,1)
+        #! sim.step() returns raw image as height x width x channels.
 
-        observation = self.preprocess_img(raw_img)
-        self.observation_buffer.append(observation)
+        observation = self.preprocess_img(raw_img.copy())
 
-        # cv2.namedWindow('observation', cv2.WINDOW_NORMAL)
-        # cv2.namedWindow('raw', cv2.WINDOW_NORMAL)
-        # cv2.imshow('observation', observation)
-        # cv2.imshow('raw', raw_img)
-        # cv2.waitKey(0)
+        if self.use3imgBuffer:
+            self.observation_buffer.append(observation)
+
+        cv2.namedWindow('observation', cv2.WINDOW_NORMAL)
+        cv2.imshow('observation', observation)
+        cv2.namedWindow('raw', cv2.WINDOW_NORMAL)
+        cv2.imshow('raw', raw_img)
+        cv2.waitKey(0)
 
         self.num_steps_taken += 1
         if self.num_steps_taken > self.max_episode_length:
             self.done = True
             reward = 0
 
-        #! somehow the 2nd entry of observation buffer is getting flipped... must be the observation coming out of preprocess_img(). True.
-        return np.dstack(self.observation_buffer), reward, self.done, self.info
+        if self.use3imgBuffer:
+            return np.dstack(self.observation_buffer), reward, self.done, self.info
+        else:
+            return observation, reward, self.done, self.info
 
     def reset(self):
         """Reset gets called right after init typically.
@@ -110,6 +118,13 @@ class CustomDuckieTownSim(gym.Env):
         self.done = False
         self.num_steps_taken = 0
         self.observation_buffer = deque(self.initial_obs, maxlen=3)
+
+        if self.randomizeCameraParamOnReset:
+            self.camera_settings["angle"]["pitch"] = np.random.uniform(-10, 0)
+            self.camera_settings["angle"]["roll"] = np.random.uniform(-5,5)
+
+            # print(self.camera_settings["angle"]["pitch"])
+            # print(self.camera_settings["angle"]["roll"])
 
         self.sim = Simulator(cameraSettings=self.camera_settings)
 
@@ -177,5 +192,7 @@ class CustomDuckieTownSim(gym.Env):
         # print(f"observation.shape: {observation.shape}")
         # self.observation_buffer.append(observation)
 
-        
-        return np.dstack(self.initial_obs) # reward, done, info can't be included
+        if self.use3imgBuffer:
+            return np.dstack(self.initial_obs) # reward, done, info can't be included
+        else:
+            return self.initial_obs
