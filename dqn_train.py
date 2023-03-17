@@ -172,10 +172,10 @@ if __name__ == "__main__":
         "exploration_fraction": 0.1,
         "exploration_final_eps": 0.01,
         "max_episode_length":2000,
-        "yellow_image_noise":False,
+        "yellow_image_noise":True,
         "blackAndWhite": True,
         "use3imgBuffer":True, #! only works if blackAndWhite is true
-        "randomizeCameraParamsOnReset":False,
+        "randomizeCameraParamsOnReset":True,
         "notes":"add notes here"
     }
 

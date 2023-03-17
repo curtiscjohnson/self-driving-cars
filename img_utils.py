@@ -4,7 +4,10 @@ import numpy as np
 
 def preprocess_image(BGRimg, removeBottomStrip=False, blackAndWhite=False, addYellowNoise=False, use3imgBuffer=False):
 
-    BGRimg = cv2.bilateralFilter(BGRimg,5,75,75)
+    BGRimg = cv2.bilateralFilter(BGRimg,5,75,75) #theoretically good at removing noise but keeping sharp lines.
+
+    #? may want to try adaptive thresholding on hardware. Might help with whites? 
+    #? https://docs.opencv.org/4.x/d7/d4d/tutorial_py_thresholding.html#:~:text=image-,Adaptive%20Thresholding,-In%20the%20previous
 
     #! BGRimg comes in as height x width x channels
     if addYellowNoise:
