@@ -106,7 +106,7 @@ def train(config, sync2wandb=False):
             # tb_log_name=f"{run}",
             progress_bar=True,
             callback=CheckpointCallback(
-                save_freq=20,
+                save_freq=1e5,
                 save_path=model_save_path,
                 name_prefix=f"{run}_model",
             ),
@@ -145,7 +145,7 @@ if __name__ == "__main__":
 
     # taken from https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/dqn.yml
     config = {
-        "n_timesteps": 60,  # sb3 dqn runs go up to 1e7 at most
+        "n_timesteps": 5e6,  # sb3 dqn runs go up to 1e7 at most
         "policy": "CnnPolicy",
         "env": "CustomDuckieTown",
         "actions": [-30, 0, 30],
@@ -167,7 +167,7 @@ if __name__ == "__main__":
         "blackAndWhite": True,
         "use3imgBuffer":True, #! only works if blackAndWhite is true
         "randomizeCameraParamsOnReset":True,
-        "notes":"On auto-19"
+        "notes":"On auto-20, trying no yellow noise with BW image buffer."
     }
 
     train(config, False)
