@@ -10,6 +10,8 @@ from multiprocessing import Manager, Process
 from stable_baselines3.common.vec_env import VecFrameStack
 import random
 import json
+import time
+
 
 
 def make_env(display, config):
@@ -76,9 +78,9 @@ def train(config, sync2wandb=False):
 
         
     else:
-        # Get the run number as a timestamp (subtracting to remove a few digits)
-        run = int(datetime.timestamp(datetime.now()) - 1670000000)
 
+        run = time.strftime("%Y%m%d-%H%M%S")
+        
         model = DQN(
             config["policy"],
             env,
@@ -162,7 +164,7 @@ if __name__ == "__main__":
         "blackAndWhite": True,
         "use3imgBuffer":True, #! only works if blackAndWhite is true
         "randomizeCameraParamsOnReset":True,
-        "notes":""
+        "notes":"On auto-19"
     }
 
     train(config, False)
