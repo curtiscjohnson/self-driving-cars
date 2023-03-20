@@ -57,7 +57,7 @@ def train(config, sync2wandb=False):
             exploration_fraction=config["exploration_fraction"],
             exploration_final_eps=config["exploration_final_eps"],
             tensorboard_log=f"sb3_runs/wandb/{run.id}",
-            verbose=1,
+            verbose=0,
         )
 
         final_model = model.learn(
@@ -66,7 +66,7 @@ def train(config, sync2wandb=False):
             callback=WandbCallback(
                 # gradient_save_freq=100,
                 model_save_path=f"sb3_models/wandb/{run.id}",
-                verbose=1,
+                verbose=0,
                 model_save_freq=10000,
                 log="all",
             ),
@@ -80,6 +80,8 @@ def train(config, sync2wandb=False):
     else:
 
         run = time.strftime("%Y%m%d-%H%M%S")
+        netid = "cjohns94"
+        path_to_jdrive = f"/fsg/{netid}/groups/self-driving"
         
         model = DQN(
             config["policy"],
@@ -94,16 +96,17 @@ def train(config, sync2wandb=False):
             gradient_steps=config["gradient_steps"],
             exploration_fraction=config["exploration_fraction"],
             exploration_final_eps=config["exploration_final_eps"],
-            tensorboard_log=f"./sb3_runs/local/{run}/",
-            verbose=1,
+            tensorboard_log=f"{path_to_jdrive}/sb3_runs/{run}",
+            verbose=0,
         )
             
-        model_save_path = f"./sb3_models/local/{run}/"
+        model_save_path = f"{path_to_jdrive}/sb3_models/{run}/"
         final_model = model.learn(
             total_timesteps=config["n_timesteps"],
-            tb_log_name=model.tensorboard_log,
+            # tb_log_name=f"{run}",
+            progress_bar=True,
             callback=CheckpointCallback(
-                save_freq=1e5,
+                save_freq=20,
                 save_path=model_save_path,
                 name_prefix=f"{run}_model",
             ),
@@ -142,7 +145,7 @@ if __name__ == "__main__":
 
     # taken from https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/dqn.yml
     config = {
-        "n_timesteps": 5e6,  # sb3 dqn runs go up to 1e7 at most
+        "n_timesteps": 60,  # sb3 dqn runs go up to 1e7 at most
         "policy": "CnnPolicy",
         "env": "CustomDuckieTown",
         "actions": [-30, 0, 30],
