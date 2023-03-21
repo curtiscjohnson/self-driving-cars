@@ -15,22 +15,12 @@ def make_env(display, config):
         config["actions"],
         config["max_episode_length"],
         config["yellow_image_noise"],
+        config["blackAndWhite"],
+        config["use3imgBuffer"],
+        config["randomizeCameraParamsOnReset"],
         display,
     )
     env = Monitor(env)  # record stats such as returns
-
-    # Frame-stacking with 4 frames
-    # env = VecFrameStack(env, n_stack=4)
-
-    # env = DummyVecEnv([make_env])
-
-    # env = VecVideoRecorder(
-    #     env,
-    #     f"videos/{run.id}",For some reason I can't get on github, but I'm pretty sure it's in the tile generator file. Definitely in the simulation folder, one of the tile classes
-
-    #     record_video_trigger=lambda x: x % 2000 == 0,
-    #     video_length=200
-    #
     return env
 
 def validate(model, config):
@@ -46,18 +36,18 @@ def validate(model, config):
 
 if __name__ == "__main__":
 
-    model_run_id = 8904922
-    steps = 4600000
-    model_path = f"./sb3_models/local/{model_run_id}/"
+    model_run_id = "20230320-123613"
+    steps = 4900000
+    model_path = f"/fsg/cjohns94/groups/self-driving/sb3_models/{model_run_id}/"
     # model = DQN.load("./sb3_models/local/650/650_model_760000_steps.zip")
     # model = DQN.load("./sb3_models/local/91/91_model_1000000_steps.zip")
     # model = DQN.load("./sb3_models/local/650/650_model_1000000_steps.zip")
-    model = DQN.load(model_path+f"{model_run_id}_model_{steps}_steps.zip")
+    model = DQN.load(model_path+f"{model_run_id}_model_{steps}_steps")
 
     with open(model_path+"config.txt", 'r') as f:
         config = json.load(f)
     
-    # print(config)
+    print(config)
 
     validate(model, config)
 
