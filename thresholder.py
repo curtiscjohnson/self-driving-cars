@@ -89,19 +89,24 @@ cv.createTrackbar(high_V_name, window_detection_name , high_V, max_value, on_hig
 
 while True:
     ## [while]
-    # ret, frame = cap.read()
-    frame = cv.imread('./sim_testing_images/64by64sim_image.png')
+    ret, frame = cap.read()
+    # frame = cv.imread('./sim_testing_images/64by64sim_image.png')
     if frame is None:
         break
 
-    frame_HSV = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
-    frame_threshold = cv.inRange(frame_HSV, (low_H, low_S, low_V), (high_H, high_S, high_V))
-    blurred = cv.GaussianBlur(frame_threshold, (5,5),0)
+    grayImage = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+    
+    (thresh, blackAndWhiteImage) = cv.threshold(grayImage, low_V, high_V, cv.THRESH_BINARY)
+
+
+    # frame_HSV = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
+    # frame_threshold = cv.inRange(frame_HSV, (low_H, low_S, low_V), (high_H, high_S, high_V))
+    # blurred = cv.GaussianBlur(frame_threshold, (5,5),0)
     ## [while]
 
     ## [show]
     cv.imshow(window_capture_name, frame)
-    cv.imshow(window_detection_name, blurred)
+    cv.imshow(window_detection_name, blackAndWhiteImage)
     ## [show]
 
     key = cv.waitKey(30)
