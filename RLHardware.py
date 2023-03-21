@@ -13,16 +13,16 @@ import json
 from img_utils import preprocess_image
 
 
-def setup_loading_model(action_space):
+def setup_loading_model(config):
     N_CHANNELS = 3
-    (HEIGHT, WIDTH) = (64, 64)
+    (WIDTH, HEIGHT) = config["camera_settings"]["resolution"]
     observation_space = spaces.Box(
         low=0, high=1, shape=(N_CHANNELS, HEIGHT, WIDTH), dtype=np.uint8
     )
     # model = DQN.load("./sb3_models/local/650/650_model_760000_steps.zip")
-    model = NatureCNN(observation_space, action_space, normalized_image=True)
+    model = NatureCNN(observation_space, config["actions"], normalized_image=True)
 
-    archive = zipfile.ZipFile("/home/car/Desktop/self-driving-cars/sb3_models/local/612/612_model_220000_steps.zip", 'r')
+    archive = zipfile.ZipFile("/home/car/Desktop/self-driving-cars/sb3_models/local/20230320-123941/20230320-123941_model_4800000_steps.zip", 'r')
     path = archive.extract('policy.pth')
     state_dict = torch.load(path)
     # print('\nState Dict:', state_dict.keys(), '\n')
@@ -48,12 +48,12 @@ def setup_loading_model(action_space):
 # cv2.destroyAllWindows()
 
 # load in RL model
-model_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/612/'
-# with open(model_path+"config.txt", 'r') as f:
-#   config = json.load(f)
-# action_space = config['actions']
-action_space = [-30, 0, 30]
-model = setup_loading_model(action_space)
+model_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/20230320-123941/'
+with open(model_path+"config.txt", 'r') as f:
+  config = json.load(f)
+model = setup_loading_model(config)
+
+print(config)
 
 # initialize realsense camera
 enableDepth = True
@@ -69,7 +69,7 @@ Car.pid(1)
 (time_, rgb, depth, accel, gyro) = rs.getData(False)
 
 # start car
-fastSpeed = 0.0
+fastSpeed = .8
 Car.drive(fastSpeed)
 
 # driving loop
@@ -81,22 +81,33 @@ while True:
   (time_, img, depth, accel, gyro) = rs.getData(False)
 
   # prepare image to go into network
-  resizedImg = cv2.resize(img, (64, 64))
-  preprocessedImg = preprocess_image(resizedImg)
+
+  # print(config["camera_settings"]["resolution"])
+  resizedImg = cv2.resize(img, tuple(config["camera_settings"]["resolution"]))
+  # cv2.namedWindow("resizedImg", cv2.WINDOW_NORMAL)
+  # cv2.imshow("resizedImg", resizedImg)
+
+  preprocessedImg = preprocess_image(
+    resizedImg,
+    removeBottomStrip=True, #should always do this on hardware
+    blackAndWhite=config["blackAndWhite"],
+    addYellowNoise=False, #no need to add noise to real world
+    use3imgBuffer=config["use3imgBuffer"]
+    )
 
   networkImg = np.moveaxis(preprocessedImg, 2, 0)
 
   # get steering angle
   action_idx = model(torch.from_numpy(networkImg/255).float()).max(0)[1].view(1,1)  
-  angle = action_space[action_idx]
+  angle = config["actions"][action_idx]
 
   # apply steering angle to car
   Car.steer(angle)
 
-  # display what camera sees
-  cv2.namedWindow("car", cv2.WINDOW_NORMAL)
-  cv2.imshow("car", preprocessedImg)
+  # # display what camera sees
+  # cv2.namedWindow("preprocessed", cv2.WINDOW_NORMAL)
+  # cv2.imshow("preprocessed", preprocessedImg)
 
-  if (cv2.waitKey(1) == ord('q')):
-      cv2.destroyAllWindows()
-      break
+  # if (cv2.waitKey(1) == ord('q')):
+  #     cv2.destroyAllWindows()
+  #     break

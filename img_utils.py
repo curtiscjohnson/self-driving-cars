@@ -6,6 +6,7 @@ def preprocess_image(BGRimg, removeBottomStrip=False, blackAndWhite=False, addYe
 
     BGRimg = cv2.bilateralFilter(BGRimg,5,75,75) #theoretically good at removing noise but keeping sharp lines.
 
+
     #? may want to try adaptive thresholding on hardware. Might help with whites? 
     #? https://docs.opencv.org/4.x/d7/d4d/tutorial_py_thresholding.html#:~:text=image-,Adaptive%20Thresholding,-In%20the%20previous
 
@@ -30,8 +31,12 @@ def preprocess_image(BGRimg, removeBottomStrip=False, blackAndWhite=False, addYe
     if blackAndWhite:
         originalImage = BGRimg
         grayImage = cv2.cvtColor(originalImage, cv2.COLOR_BGR2GRAY)
+        cv2.namedWindow("in_preprocess", cv2.WINDOW_NORMAL)
+        cv2.imshow("in_preprocess", grayImage)
         
-        (thresh, blackAndWhiteImage) = cv2.threshold(grayImage, 10, 255, cv2.THRESH_BINARY)
+        # (thresh, blackAndWhiteImage) = cv2.threshold(grayImage, 10, 255, cv2.THRESH_BINARY) #for sim
+        (thresh, blackAndWhiteImage) = cv2.threshold(grayImage, 120, 255, cv2.THRESH_BINARY) #for hw
+
 
         if use3imgBuffer:
             return blackAndWhiteImage
@@ -64,12 +69,12 @@ def preprocess_image(BGRimg, removeBottomStrip=False, blackAndWhite=False, addYe
         mask=cv2.inRange(HSVimg,lower_red,upper_red)
         blackImg[mask>0] = (0,0,255)
 
-        # black out top 1/3 of image
-        height, width, depth = blackImg.shape
-        blackImg[0:height//3,:,:] = (0, 0, 0)
+    # black out top 1/3 of image
+    height, width, depth = blackImg.shape
+    blackImg[0:height//2,:,:] = (0, 0, 0)
 
-        #black out bottom strip of image
-        if not removeBottomStrip:
-            blackImg[height - 1:height, :, :] = (0, 0, 0)
+    #black out bottom strip of image
+    if not removeBottomStrip:
+        blackImg[height - 1:height, :, :] = (0, 0, 0)
 
     return blackImg
