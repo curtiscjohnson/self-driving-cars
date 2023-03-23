@@ -70,69 +70,26 @@ centers = []
 
 # # You can use kd and kp commands to change KP and KD values.  Default values are good.
 # # loop over frames from Realsense
+j = 0
 while(True):
 	Car.drive(FAST_SPEED)
-# 	print("loop")
 	(time_, img, depth, accel, gyro) = rs.getData(False)
 
 	# control loop
-	if i%frameUpdate == 0:
-		i = 0
+	if i % frameUpdate == 0:
 
-		# masked_img = dl.get_road(img)
-        # cv2.imshow("Mask Applied to Image", masked)
-        # centers = lm.get_yellow_centers(masked)
+		i = 0
 		centers = lm.get_yellow_centers(img)
 
 		if centers != "None":
 			blobToFollowCoords = centers[-1]
 			blobX = blobToFollowCoords[0]
 			angle = pid(blobX)
-			# print(f"angle: {angle}")
 			Car.steer(angle)
 
-		# possible_turns, THRESHOLDS = lm.identify_possible_turns(img.shape, centers)
-
-		# if len(possible_turns) > 0 and not turning:
-		# 	turn = lm.pick_turn(possible_turns)
-		# 	print(f"turning: {turn}")
-		# 	# set angle
-		# 	if turn == "right":
-		# 		angle = 20
-		# 	elif turn == "left":
-		# 		angle = -20
-		# 	else:
-		# 		angle = 0
-
-		# 	Arduino.setSteering(angle)
-		# 	turning = True
-		# elif len(possible_turns) == 0:
-		# 	blobToFollowCoords = centers[-1]
-		# 	blobX = blobToFollowCoords[0]
-
-		# 	angle = pid(blobX)
-		# 	# print(f"angle: {angle}")
-		# 	Arduino.setSteering(angle)
-		# 	Arduino.setSpeed(FAST_SPEED) 
-		# 	turning = False
-
-	# Display Code
+	# Display Yellow Centers
 	if draw_bool:
 		lm.draw_centers(img, centers)
-
-		# LEFT_X_THRESH, RIGHT_X_THRESH, Y_UPPER_THRESH, Y_LOWER_THRESH = THRESHOLDS
-
-		# horizontal band
-		# img = cv2.line(img, (0, Y_LOWER_THRESH), (img.shape[1],Y_LOWER_THRESH), (0,255,0), thickness=5)
-		# img = cv2.line(img, (0, Y_UPPER_THRESH), (img.shape[1],Y_UPPER_THRESH), (0,255,0), thickness=5)
-
-		# left and right
-		# img = cv2.line(img, (LEFT_X_THRESH, 0), (LEFT_X_THRESH,img.shape[0]), (0,255,0), thickness=5)
-		# img = cv2.line(img, (RIGHT_X_THRESH, 0), (RIGHT_X_THRESH,img.shape[0]), (0,255,0), thickness=5)
-
-		# Goal Coordinate
-		# img = cv2.line(img, (desXCoord, 0), (desXCoord , img.shape[0]), (0,255,0), thickness=5)
-
 
 	cv2.imshow("car", img)
 
@@ -140,26 +97,4 @@ while(True):
 	if (cv2.waitKey(1) == ord('q')):
 		cv2.destroyAllWindows()
 		break
-
-
-#     cv2.imshow("Depth", depth)
-
-#     '''
-#     Add your code to process rgb, depth, IMU data
-#     '''
-
-#     '''
-#     Control the Car
-#     '''
-#     car.Steer
-
-#     '''
-#    	IMPORTANT: Never go full speed. Use CarTest.py to selest the best speed for you.
-#     Car can switch between positve and negative speed (go reverse) without any problem.
-#     '''
-#     key = cv2.waitKey(1) & 0xFF
-#     if key == ord("q"):
-#         break
-# del rs
-# del Car
 
