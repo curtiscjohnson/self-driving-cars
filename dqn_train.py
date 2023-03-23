@@ -25,6 +25,7 @@ def make_env(display, config):
         config["blackAndWhite"],
         config["use3imgBuffer"],
         config["randomizeCameraParamsOnReset"],
+        config["yellow_features_only"],
         display,
     )
     env = Monitor(env)  # record stats such as returns
@@ -117,7 +118,7 @@ def train(config, sync2wandb=False):
             convert_file.write(json.dumps(config))
 
 if __name__ == "__main__":
-    shrinkFactor = 10
+    shrinkFactor = 24
     img_size = (1920//shrinkFactor,1080//shrinkFactor) #! must be (cols, rows) i.e. (width, height)
     cameraSettings = {
         # "resolution": (1920, 1080),
@@ -167,7 +168,8 @@ if __name__ == "__main__":
         "blackAndWhite": True,
         "use3imgBuffer":True, #! only works if blackAndWhite is true
         "randomizeCameraParamsOnReset":True,
-        "notes":"On auto-20, trying no yellow noise with BW image buffer."
+        "yellow_features_only":True, #only works if use3imgbuffer is true
+        "notes":""
     }
 
     train(config, False)

@@ -108,7 +108,8 @@ class CustomDuckieTownSim(gym.Env):
             return observation, reward, self.done, self.info
 
     def reset(self):
-        """Reset gets called right after init typically.
+        """
+        Reset gets called right after init typically.
         This is actually where most of the setup comes in.
 
         Returns:
