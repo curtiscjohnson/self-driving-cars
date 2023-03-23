@@ -13,7 +13,6 @@ import json
 import time
 
 
-
 def make_env(display, config):
     env = CustomDuckieTownSim(
         config["camera_settings"],
@@ -33,7 +32,6 @@ def make_env(display, config):
 
 
 def train(config, sync2wandb=False):
-
     env = make_env(False, config)
     if sync2wandb:
         run = wandb.init(
@@ -77,13 +75,11 @@ def train(config, sync2wandb=False):
 
         run.finish()
 
-        
     else:
-
         run = time.strftime("%Y%m%d-%H%M%S")
         netid = "cjohns94"
         path_to_jdrive = f"/fsg/{netid}/groups/self-driving"
-        
+
         model = DQN(
             config["policy"],
             env,
@@ -100,7 +96,7 @@ def train(config, sync2wandb=False):
             tensorboard_log=f"{path_to_jdrive}/sb3_runs/{run}",
             verbose=0,
         )
-            
+
         model_save_path = f"{path_to_jdrive}/sb3_models/{run}/"
         final_model = model.learn(
             total_timesteps=config["n_timesteps"],
@@ -114,12 +110,16 @@ def train(config, sync2wandb=False):
         )
 
         # open/create file for writing config
-        with open(model_save_path+'config.txt', 'w') as convert_file:
+        with open(model_save_path + "config.txt", "w") as convert_file:
             convert_file.write(json.dumps(config))
+
 
 if __name__ == "__main__":
     shrinkFactor = 24
-    img_size = (1920//shrinkFactor,1080//shrinkFactor) #! must be (cols, rows) i.e. (width, height)
+    img_size = (
+        1920 // shrinkFactor,
+        1080 // shrinkFactor,
+    )  #! must be (cols, rows) i.e. (width, height)
     cameraSettings = {
         # "resolution": (1920, 1080),
         "resolution": img_size,
@@ -163,14 +163,13 @@ if __name__ == "__main__":
         "gradient_steps": 1,
         "exploration_fraction": 0.1,
         "exploration_final_eps": 0.01,
-        "max_episode_length":1800, #60 seconds of driving without crashing, hopefully not memorize one loop so much.
-        "yellow_image_noise":False,
+        "max_episode_length": 1800,  # 60 seconds of driving without crashing, hopefully not memorize one loop so much.
+        "yellow_image_noise": True,
         "blackAndWhite": True,
-        "use3imgBuffer":True, #! only works if blackAndWhite is true
-        "randomizeCameraParamsOnReset":True,
-        "yellow_features_only":True, #only works if use3imgbuffer is true
-        "notes":""
+        "use3imgBuffer": True,  #! only works if blackAndWhite is true
+        "randomizeCameraParamsOnReset": True,
+        "yellow_features_only": True,  # only works if blackAndWhite is true.
+        "notes": "",
     }
 
     train(config, False)
-

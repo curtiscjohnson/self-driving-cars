@@ -19,11 +19,12 @@ class CustomDuckieTownSim(gym.Env):
         map_parameters,
         car_parameters,
         action_angles: list = [-30, 0, 30],
-        max_episode_length = 1000,
-        addYellowNoise = False,
-        blackAndWhite = False,
+        max_episode_length=1000,
+        addYellowNoise=False,
+        blackAndWhite=False,
         use3imgBuffer=False,
         randomizeCameraParamsOnReset=False,
+        yellow_features_only=False,
         display=False,
     ):
         super().__init__()
@@ -32,6 +33,7 @@ class CustomDuckieTownSim(gym.Env):
         self.map_parameters = map_parameters
         self.car_parameters = car_parameters
         self.display = display
+        self.yellow_features_only = yellow_features_only
 
         # Define action and observation space
         # They must be gym.spaces objects
@@ -46,7 +48,6 @@ class CustomDuckieTownSim(gym.Env):
         # (HEIGHT, WIDTH) = self.camera_settings["resolution"]
         (WIDTH, HEIGHT) = self.camera_settings["resolution"]
 
-
         self.observation_space = spaces.Box(
             low=0, high=255, shape=(HEIGHT, WIDTH, N_CHANNELS), dtype=np.uint8
         )
@@ -58,30 +59,31 @@ class CustomDuckieTownSim(gym.Env):
         self.use3imgBuffer = use3imgBuffer
         self.randomizeCameraParamOnReset = randomizeCameraParamsOnReset
         if use3imgBuffer:
-            self.initial_obs = [np.zeros((HEIGHT,WIDTH))] * 3
+            self.initial_obs = [np.zeros((HEIGHT, WIDTH))] * 3
             self.observation_buffer = deque(self.initial_obs, maxlen=3)
         else:
-            self.initial_obs = np.zeros((HEIGHT, WIDTH,N_CHANNELS))
+            self.initial_obs = np.zeros((HEIGHT, WIDTH, N_CHANNELS))
 
     def preprocess_img(self, raw_img):
-            # some feature engineering to separate out red/white/yellow was done in that paper
-            # maybe also do some horizon cropping? maybe not important for sim training
-            # also maybe stacking a short sequence of images too? - https://stable-baselines3.readthedocs.io/en/master/guide/vec_envs.html#vecframestack
-            # !SB3 CNNPolicy normalizes images by default.
+        # some feature engineering to separate out red/white/yellow was done in that paper
+        # maybe also do some horizon cropping? maybe not important for sim training
+        # also maybe stacking a short sequence of images too? - https://stable-baselines3.readthedocs.io/en/master/guide/vec_envs.html#vecframestack
+        # !SB3 CNNPolicy normalizes images by default.
 
-            processed_img = image_process(
-                raw_img,
-                removeBottomStrip=True,
-                blackAndWhite=self.blackAndWhite,
-                addYellowNoise=self.addYellowNoise,
-                use3imgBuffer=self.use3imgBuffer,
-            )
+        processed_img = image_process(
+            raw_img,
+            removeBottomStrip=True,
+            blackAndWhite=self.blackAndWhite,
+            addYellowNoise=self.addYellowNoise,
+            use3imgBuffer=self.use3imgBuffer,
+            yellow_features_only=self.yellow_features_only,
+        )
 
-            return processed_img.astype(np.uint8)
+        return processed_img.astype(np.uint8)
 
     def step(self, action):
         raw_img, reward, self.done = self.sim.step(
-            steer=self.action_angles[action], speed=1.0, display=self.display
+            steer=self.action_angles[action], speed=0.8, display=self.display
         )
         self.info = {}
         #! sim.step() returns raw image as height x width x channels.
@@ -122,7 +124,7 @@ class CustomDuckieTownSim(gym.Env):
 
         if self.randomizeCameraParamOnReset:
             self.camera_settings["angle"]["pitch"] = np.random.uniform(-10, 0)
-            self.camera_settings["angle"]["roll"] = np.random.uniform(-5,5)
+            self.camera_settings["angle"]["roll"] = np.random.uniform(-5, 5)
 
             # print(self.camera_settings["angle"]["pitch"])
             # print(self.camera_settings["angle"]["roll"])
@@ -194,6 +196,6 @@ class CustomDuckieTownSim(gym.Env):
         # self.observation_buffer.append(observation)
 
         if self.use3imgBuffer:
-            return np.dstack(self.initial_obs) # reward, done, info can't be included
+            return np.dstack(self.initial_obs)  # reward, done, info can't be included
         else:
             return self.initial_obs
