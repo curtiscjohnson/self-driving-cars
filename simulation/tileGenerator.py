@@ -10,15 +10,15 @@ centerWidth = 1
 centerLength = 2
 centerGap = 1
 
-white = (255, 255, 255)
-yellow = (0, 255, 255)
-black = (0, 0, 0)
-red = (0, 0, 255)
-
-# white = (random.randint(200, 255), random.randint(200, 255), random.randint(200, 255))
-# yellow = (random.randint(0, 100), random.randint(155, 255), random.randint(155, 255))
+# white = (255, 255, 255)
+# yellow = (0, 255, 255)
 # black = (0, 0, 0)
-# red = (random.randint(0, 50), random.randint(0, 50), random.randint(155, 205))
+# red = (0, 0, 255)
+
+white = (random.randint(200, 255), random.randint(200, 255), random.randint(200, 255))
+yellow = (random.randint(0, 100), random.randint(155, 255), random.randint(155, 255))
+black = (0, 0, 0)
+red = (random.randint(0, 50), random.randint(0, 50), random.randint(155, 205))
 
 
 borderPixels = borderInches * pixelsPerInch
