@@ -29,7 +29,7 @@ def get_yellow_centers(bgr_img):
         if M['m00'] != 0:
             cx = int(M['m10']/M['m00'])
             cy = int(M['m01']/M['m00'])
-            if cy > hsv_img.shape[0]*3.5/5: #where to look for centers
+            if cy > hsv_img.shape[0]*3/5: #where to look for centers
                 centers.append((cx, cy))
 
     centers.sort(key = lambda x: x[1])
@@ -40,12 +40,12 @@ def get_yellow_centers(bgr_img):
     else:
         return centers
 
-def draw_centers(img, centers):
+def draw_centers(img, centers, size=7):
     # Draws given centers onto given image
     if len(centers) > 1 and centers != "None":
         # print(f"centers;: {centers}")
         for point in centers:
-            cv2.circle(img, point, 7, (255, 0, 255), -1) 
+            cv2.circle(img, point, size, (255, 0, 255), -1) 
             # args: img to draw on, point to draw, size of circle, color, line width (-1 defaults to fill)
 
 

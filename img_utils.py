@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 
-
 def preprocess_image(BGRimg, removeBottomStrip=False, blackAndWhite=False, addYellowNoise=False, use3imgBuffer=False):
 
     BGRimg = cv2.bilateralFilter(BGRimg,5,75,75) #theoretically good at removing noise but keeping sharp lines.
