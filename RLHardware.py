@@ -2,27 +2,24 @@ from Arduino import Arduino
 from RealSense import *
 import numpy as np
 import cv2
-import time as tm
+import time
 import torch
-import torch.nn as nn
 import zipfile
-# from stable_baselines3 import DQN
 from utils_network import NatureCNN
 from gym import spaces
 import json
 from img_utils import preprocess_image
+import matplotlib.pyplot as plt
 
-
-def setup_loading_model(config):
+def setup_loading_model(zip_path, config):
     N_CHANNELS = 3
     (WIDTH, HEIGHT) = config["camera_settings"]["resolution"]
     observation_space = spaces.Box(
         low=0, high=1, shape=(N_CHANNELS, HEIGHT, WIDTH), dtype=np.uint8
     )
-    # model = DQN.load("./sb3_models/local/650/650_model_760000_steps.zip")
     model = NatureCNN(observation_space, config["actions"], normalized_image=True)
 
-    archive = zipfile.ZipFile("/home/car/Desktop/self-driving-cars/sb3_models/local/20230320-123941/20230320-123941_model_4800000_steps.zip", 'r')
+    archive = zipfile.ZipFile("/home/car/Desktop/self-driving-cars/sb3_models/local/8826224/8826224_model_4600000_steps.zip", 'r')
     path = archive.extract('policy.pth')
     state_dict = torch.load(path)
     # print('\nState Dict:', state_dict.keys(), '\n')
@@ -41,73 +38,132 @@ def setup_loading_model(config):
 
     return model
 
-# path = r'/fsg/hps22/self-driving-cars/testimg.jpg'
-# preprocessedImg = preprocess_image(cv2.imread(path))
-# cv2.imshow("car", preprocessedImg)
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
 
-# load in RL model
-model_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/20230320-123941/'
-with open(model_path+"config.txt", 'r') as f:
-  config = json.load(f)
-model = setup_loading_model(config)
+def profiling_loop(model, rs, config, Car, speed, drive=True):
+  j = 0
+  history = []
 
-print(config)
+  while j < 300:
+    if drive:
+      Car.drive(speed)
 
-# initialize realsense camera
-enableDepth = True
-rs = RealSense("/dev/video2", RS_VGA, enableDepth)
-writer = None
+    start1 = time.time()
+    img = rs.getData(False)
+    getdata = time.time() - start1
 
-# initialize car
-Car = Arduino("/dev/ttyUSB0", 115200)  
-Car.zero(1440)
-Car.pid(1)
+    # cv2.namedWindow("img", cv2.WINDOW_NORMAL)
+    # cv2.imshow("img", img)
+    # cv2.waitKey(0)
 
-# start camera
-(time_, rgb, depth, accel, gyro) = rs.getData(False)
+    # prepare image to go into network
+    start = time.time()
+    resizedImg = cv2.resize(img, tuple(config["camera_settings"]["resolution"]))
+    resize = time.time() - start
 
-# start car
-fastSpeed = .8
-Car.drive(fastSpeed)
+    start = time.time()
+    preprocessedImg = preprocess_image(
+      resizedImg,
+      removeBottomStrip=True, #should always do this on hardware
+      blackAndWhite=False, #config["blackAndWhite"],
+      addYellowNoise=False, #no need to add noise to real world
+      use3imgBuffer=False#config["use3imgBuffer"]
+      )
+    process = time.time() - start
 
-# driving loop
-while True:
-  
-  Car.drive(fastSpeed)
+    start = time.time()
+    networkImg = np.moveaxis(preprocessedImg, 2, 0)
+    moveaxis = time.time() - start
 
-  # get data from camera
-  (time_, img, depth, accel, gyro) = rs.getData(False)
+    # get steering angle
+    start = time.time()
+    action_idx = model(torch.from_numpy(networkImg/255).float()).max(0)[1].view(1,1)  
+    getaction = time.time() - start
+    end = time.time()
 
-  # prepare image to go into network
+    angle = config["actions"][action_idx]
+    if drive:
+      Car.steer(angle)
+    history.append(end-start1)
+    print(f'getdata: {getdata}, resize: {resize}, process: {process}, moveaxis: {moveaxis}, getaction: {getaction}, loop time: {end-start1}')
+    j += 1
+  plt.hist(history, bins=50)
+  plt.xlim((0.00, 0.4))
+  plt.show()
 
-  # print(config["camera_settings"]["resolution"])
-  resizedImg = cv2.resize(img, tuple(config["camera_settings"]["resolution"]))
-  # cv2.namedWindow("resizedImg", cv2.WINDOW_NORMAL)
-  # cv2.imshow("resizedImg", resizedImg)
+def driving_loop(model, rs, config, Car, speed, drive=True):
+  while True:
+    if drive:
+      Car.drive(speed)
 
-  preprocessedImg = preprocess_image(
-    resizedImg,
-    removeBottomStrip=True, #should always do this on hardware
-    blackAndWhite=config["blackAndWhite"],
-    addYellowNoise=False, #no need to add noise to real world
-    use3imgBuffer=config["use3imgBuffer"]
-    )
+    img = rs.getData(False)
 
-  networkImg = np.moveaxis(preprocessedImg, 2, 0)
+    # cv2.namedWindow("img", cv2.WINDOW_NORMAL)
+    # cv2.imshow("img", img)
+    # cv2.waitKey(0)
 
-  # get steering angle
-  action_idx = model(torch.from_numpy(networkImg/255).float()).max(0)[1].view(1,1)  
-  angle = config["actions"][action_idx]
+    # prepare image to go into network
+    resizedImg = cv2.resize(img, tuple(config["camera_settings"]["resolution"]))
 
-  # apply steering angle to car
-  Car.steer(angle)
+    preprocessedImg = preprocess_image(
+      resizedImg,
+      removeBottomStrip=True, #should always do this on hardware
+      blackAndWhite=True,#,config["blackAndWhite"],
+      addYellowNoise=True, #no need to add noise to real world
+      use3imgBuffer=False#config["use3imgBuffer"]
+      )
 
-  # # display what camera sees
-  # cv2.namedWindow("preprocessed", cv2.WINDOW_NORMAL)
-  # cv2.imshow("preprocessed", preprocessedImg)
+    networkImg = np.moveaxis(preprocessedImg, 2, 0)
 
-  # if (cv2.waitKey(1) == ord('q')):
-  #     cv2.destroyAllWindows()
-  #     break
+    # get steering angle
+    action_idx = model(torch.from_numpy(networkImg/255).float()).max(0)[1].view(1,1)  
+
+    angle = config["actions"][action_idx]
+    if drive:
+      Car.steer(angle)
+
+    # # display what camera sees
+    # cv2.namedWindow("preprocessed", cv2.WINDOW_NORMAL)
+    # cv2.imshow("preprocessed", preprocessedImg)
+
+    # if (cv2.waitKey(1) == ord('q')):
+    #     cv2.destroyAllWindows()
+    #     break
+
+
+
+if __name__=='__main__':
+  # load in RL model
+  model_name = 8826224
+  steps = 4600000
+  model_path = f'/home/car/Desktop/self-driving-cars/sb3_models/local/{model_name}/'
+  zip_path = model_path + f'{model_name}_{steps}_steps.zip'
+  time_profiling = True
+
+  speed = .8
+  drive = False
+
+  with open(model_path+"config.txt", 'r') as f:
+    config = json.load(f)
+  model = setup_loading_model(zip_path, config)
+  print(config)
+
+  ## initialize realsense camera
+  rs = RealSense("/dev/video2", RS_VGA)
+
+  ## start camera
+  img = rs.getData(False)
+
+  ## start car
+  if drive:
+    # initialize car
+    Car = Arduino("/dev/ttyUSB0", 115200)  
+    Car.zero(1440)
+    Car.pid(1)
+    Car.drive(speed)
+  else:
+    Car = None
+
+if not time_profiling:
+  driving_loop(model, rs, config, Car, speed, drive=drive)
+else:
+  profiling_loop(model, rs, config, Car, speed, drive=drive)

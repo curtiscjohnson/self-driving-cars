@@ -31,8 +31,8 @@ def preprocess_image(BGRimg, removeBottomStrip=False, blackAndWhite=False, addYe
     if blackAndWhite:
         originalImage = BGRimg
         grayImage = cv2.cvtColor(originalImage, cv2.COLOR_BGR2GRAY)
-        cv2.namedWindow("in_preprocess", cv2.WINDOW_NORMAL)
-        cv2.imshow("in_preprocess", grayImage)
+        # cv2.namedWindow("in_preprocess", cv2.WINDOW_NORMAL)
+        # cv2.imshow("in_preprocess", grayImage)
         
         # (thresh, blackAndWhiteImage) = cv2.threshold(grayImage, 10, 255, cv2.THRESH_BINARY) #for sim
         (thresh, blackAndWhiteImage) = cv2.threshold(grayImage, 120, 255, cv2.THRESH_BINARY) #for hw
