@@ -19,7 +19,6 @@ class CustomDuckieTownSim(gym.Env):
         map_parameters,
         car_parameters,
         action_angles: list = [-30, 0, 30],
-        max_episode_length=1000,
         addYellowNoise=False,
         blackAndWhite=False,
         use3imgBuffer=False,
@@ -52,8 +51,6 @@ class CustomDuckieTownSim(gym.Env):
             low=0, high=255, shape=(HEIGHT, WIDTH, N_CHANNELS), dtype=np.uint8
         )
         # ! I'm pretty sure observation space is supposed to be the features the agent has access to -- the preprocessed image.
-        self.num_steps_taken = 0
-        self.max_episode_length = max_episode_length
         self.addYellowNoise = addYellowNoise
         self.blackAndWhite = blackAndWhite
         self.use3imgBuffer = use3imgBuffer
@@ -99,10 +96,6 @@ class CustomDuckieTownSim(gym.Env):
         # cv2.imshow('raw', raw_img)
         # cv2.waitKey(0)
 
-        self.num_steps_taken += 1
-        if self.num_steps_taken > self.max_episode_length:
-            self.done = True
-            reward = 0
 
         if self.use3imgBuffer:
             return np.dstack(self.observation_buffer), reward, self.done, self.info

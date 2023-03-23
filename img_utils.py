@@ -51,9 +51,9 @@ def preprocess_image(
             lower_yellow = np.array([15, 89, 124])
             upper_yellow = np.array([100, 255, 255])
             blackAndWhiteImage = cv2.inRange(HLSimg, lower_yellow, upper_yellow)
-            cv2.namedWindow("yellow_thresholded", cv2.WINDOW_NORMAL)
-            cv2.imshow("yellow_thresholded", blackAndWhiteImage)
-            cv2.waitKey(0)
+            # cv2.namedWindow("yellow_thresholded", cv2.WINDOW_NORMAL)
+            # cv2.imshow("yellow_thresholded", blackAndWhiteImage)
+            # cv2.waitKey(0)
         else:
             # take all color to grayscale
             originalImage = BGRimg

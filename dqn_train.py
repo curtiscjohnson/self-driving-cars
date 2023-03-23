@@ -19,7 +19,6 @@ def make_env(display, config):
         config["map_parameters"],
         config["car_parameters"],
         config["actions"],
-        config["max_episode_length"],
         config["yellow_image_noise"],
         config["blackAndWhite"],
         config["use3imgBuffer"],
@@ -161,15 +160,14 @@ if __name__ == "__main__":
         "target_update_interval": 1000,
         "train_freq": 4,
         "gradient_steps": 1,
-        "exploration_fraction": 0.1,
+        "exploration_fraction": 0.25,
         "exploration_final_eps": 0.01,
-        "max_episode_length": 1800,  # 60 seconds of driving without crashing, hopefully not memorize one loop so much.
         "yellow_image_noise": True,
         "blackAndWhite": True,
         "use3imgBuffer": True,  #! only works if blackAndWhite is true
         "randomizeCameraParamsOnReset": True,
         "yellow_features_only": True,  # only works if blackAndWhite is true.
-        "notes": "",
+        "notes": "trying training on buffer of yellow only images, downsampled for higher model eval speed. ",
     }
 
     train(config, False)
