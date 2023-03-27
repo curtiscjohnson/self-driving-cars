@@ -1,4 +1,3 @@
-import black
 import cv2
 import numpy as np
 
@@ -48,8 +47,8 @@ def preprocess_image(
         if yellow_features_only:
             # take only yellow to grayscale operation - maybe do adaptive thresholding here?
             HLSimg = cv2.cvtColor(BGRimg, cv2.COLOR_BGR2HLS)
-            lower_yellow = np.array([15, 89, 124])
-            upper_yellow = np.array([100, 255, 255])
+            lower_yellow = np.array([23, 83, 183])
+            upper_yellow = np.array([35, 137, 255])
             blackAndWhiteImage = cv2.inRange(HLSimg, lower_yellow, upper_yellow)
             # cv2.namedWindow("yellow_thresholded", cv2.WINDOW_NORMAL)
             # cv2.imshow("yellow_thresholded", blackAndWhiteImage)
