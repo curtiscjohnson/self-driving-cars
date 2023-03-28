@@ -15,8 +15,16 @@ def preprocess_image(
     # cv2.waitKey(0)
 
     BGRimg = cv2.bilateralFilter(
-        BGRimg, 5, 75, 75
+        BGRimg, 3, 50, 50
     )  # theoretically good at removing noise but keeping sharp lines.
+
+    # black out top 1/3 of image
+    height, width, depth = BGRimg.shape
+    BGRimg[0 : height // 2, :, :] = (0, 0, 0)
+
+    # black out bottom strip of image
+    if not removeBottomStrip:
+        BGRimg[height - 1 : height, :, :] = (0, 0, 0)
 
     # cv2.namedWindow("filtered", cv2.WINDOW_NORMAL)
     # cv2.imshow("filtered", BGRimg)
@@ -47,8 +55,8 @@ def preprocess_image(
         if yellow_features_only:
             # take only yellow to grayscale operation - maybe do adaptive thresholding here?
             HLSimg = cv2.cvtColor(BGRimg, cv2.COLOR_BGR2HLS)
-            lower_yellow = np.array([23, 83, 183])
-            upper_yellow = np.array([35, 137, 255])
+            lower_yellow = np.array([18, 73, 85])
+            upper_yellow = np.array([57, 216, 255])
             blackAndWhiteImage = cv2.inRange(HLSimg, lower_yellow, upper_yellow)
             # cv2.namedWindow("yellow_thresholded", cv2.WINDOW_NORMAL)
             # cv2.imshow("yellow_thresholded", blackAndWhiteImage)
@@ -95,12 +103,5 @@ def preprocess_image(
         mask = cv2.inRange(HSVimg, lower_red, upper_red)
         blackImg[mask > 0] = (0, 0, 255)
 
-    # black out top 1/3 of image
-    height, width, depth = blackImg.shape
-    blackImg[0 : height // 2, :, :] = (0, 0, 0)
-
-    # black out bottom strip of image
-    if not removeBottomStrip:
-        blackImg[height - 1 : height, :, :] = (0, 0, 0)
 
     return blackImg

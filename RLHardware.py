@@ -22,7 +22,7 @@ def setup_loading_model(config):
     # model = DQN.load("./sb3_models/local/650/650_model_760000_steps.zip")
     model = NatureCNN(observation_space, config["actions"], normalized_image=True)
 
-    archive = zipfile.ZipFile("/home/car/Desktop/self-driving-cars/sb3_models/local/curtis-20230325-124016/curtis-20230325-124016_model_800000_steps.zip", 'r')
+    archive = zipfile.ZipFile("/home/car/Desktop/self-driving-cars/sb3_models/local/20230320-123613/20230320-123613_model_4900000_steps.zip", 'r')
     path = archive.extract('policy.pth')
     state_dict = torch.load(path)
     # print('\nState Dict:', state_dict.keys(), '\n')
@@ -48,7 +48,7 @@ def setup_loading_model(config):
 # cv2.destroyAllWindows()
 
 # load in RL model
-model_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/curtis-20230325-124016/'
+model_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/20230320-123613/'
 with open(model_path+"config.txt", 'r') as f:
   config = json.load(f)
 model = setup_loading_model(config)
@@ -69,44 +69,50 @@ Car.pid(1)
 (time_, rgb, depth, accel, gyro) = rs.getData(False)
 
 # start car
-fastSpeed = 0.8*0
+fastSpeed = 0.8
 Car.drive(fastSpeed)
+
+model.eval()
+model.cuda()
 
 # driving loop
 while True:
-  
   Car.drive(fastSpeed)
 
   # get data from camera
   (time_, img, depth, accel, gyro) = rs.getData(False)
 
   # prepare image to go into network
-
-  # print(config["camera_settings"]["resolution"])
-  resizedImg = cv2.resize(img, tuple(config["camera_settings"]["resolution"]))
-  cv2.namedWindow("resizedImg", cv2.WINDOW_NORMAL)
-  cv2.imshow("resizedImg", resizedImg)
-
   preprocessedImg = preprocess_image(
-    resizedImg,
+    img,
     removeBottomStrip=True, #should always do this on hardware
     blackAndWhite=config["blackAndWhite"],
     addYellowNoise=False, #no need to add noise to real world
     use3imgBuffer=config["use3imgBuffer"],
-    yellow_features_only=config["yellow_features_only"]
+    # yellow_features_only=config["yellow_features_only"]
     )
 
-  networkImg = np.moveaxis(preprocessedImg, 2, 0)
+  # print(config["camera_settings"]["resolution"])
+  resizedImg = cv2.resize(preprocessedImg, tuple(config["camera_settings"]["resolution"]))
+  # cv2.namedWindow("resizedImg", cv2.WINDOW_NORMAL)
+  # cv2.imshow("resizedImg", resizedImg)
+  print(resizedImg.shape)
+  networkImg = np.moveaxis(np.expand_dims(resizedImg, -1), 2, 0)
 
+  start = time.time()
   # get steering angle
-  action_idx = model(torch.from_numpy(networkImg/255).float()).max(0)[1].view(1,1)  
+  with torch.no_grad():
+    action_idx = model(torch.from_numpy(networkImg/255).float().cuda()).max(0)[1].view(1,1)  
   angle = config["actions"][action_idx]
   # apply steering angle to car
+  end = time.time()
+
   Car.steer(angle)
+  print(f'Loop Time: {end-start}')
 
   # # display what camera sees
-  cv2.namedWindow("preprocessed", cv2.WINDOW_NORMAL)
-  cv2.imshow("preprocessed", preprocessedImg)
+  # cv2.namedWindow("preprocessed", cv2.WINDOW_NORMAL)
+  # cv2.imshow("preprocessed", preprocessedImg)
 
   if (cv2.waitKey(1) == ord('q')):
       cv2.destroyAllWindows()
