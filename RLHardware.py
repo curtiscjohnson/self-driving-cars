@@ -47,75 +47,75 @@ def setup_loading_model(config):
 # cv2.waitKey(0)
 # cv2.destroyAllWindows()
 
-# load in RL model
-model_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/curtis-20230325-124016'
-with open(model_path+"/config.txt", 'r') as f:
-  config = json.load(f)
-model = setup_loading_model(config)
+# # load in RL model
+# model_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/curtis-20230325-124016'
+# with open(model_path+"/config.txt", 'r') as f:
+#   config = json.load(f)
+# model = setup_loading_model(config)
 
-print(config)
+# print(config)
 
-# initialize realsense camera
-enableDepth = True
-rs = RealSense("/dev/video2", RS_VGA, enableDepth)
-writer = None
+# # initialize realsense camera
+# enableDepth = True
+# rs = RealSense("/dev/video2", RS_VGA, enableDepth)
+# writer = None
 
-# initialize car
-Car = Arduino("/dev/ttyUSB0", 115200)  
-Car.zero(1440)
-Car.pid(1)
+# # initialize car
+# Car = Arduino("/dev/ttyUSB0", 115200)  
+# Car.zero(1440)
+# Car.pid(1)
 
-# start camera
-(time_, rgb, depth, accel, gyro) = rs.getData(False)
+# # start camera
+# rgb = rs.getData(False)
 
-# start car
-fastSpeed = 0.8
-Car.drive(fastSpeed)
+# # start car
+# fastSpeed = 0.8
+# Car.drive(fastSpeed)
 
-model.eval()
-model.cuda()
+# model.eval()
+# model.cuda()
 
-# driving loop
-while True:
-  Car.drive(fastSpeed)
+# # driving loop
+# while True:
+#   Car.drive(fastSpeed)
 
-  # get data from camera
-  (time_, img, depth, accel, gyro) = rs.getData(False)
+#   # get data from camera
+#   img = rs.getData(False)
 
-  resizedImg = cv2.resize(img, tuple(config["camera_settings"]["resolution"]))
+#   resizedImg = cv2.resize(img, tuple(config["camera_settings"]["resolution"]))
 
-  # prepare image to go into network
-  preprocessedImg = preprocess_image(
-    resizedImg,
-    removeBottomStrip=True, #should always do this on hardware
-    blackAndWhite=config["blackAndWhite"],
-    addYellowNoise=False, #no need to add noise to real world
-    use3imgBuffer=config["use3imgBuffer"],
-    yellow_features_only=config["yellow_features_only"]
-    )
+#   # prepare image to go into network
+#   preprocessedImg = preprocess_image(
+#     resizedImg,
+#     removeBottomStrip=True, #should always do this on hardware
+#     blackAndWhite=config["blackAndWhite"],
+#     addYellowNoise=False, #no need to add noise to real world
+#     use3imgBuffer=config["use3imgBuffer"],
+#     yellow_features_only=config["yellow_features_only"]
+#     )
 
-  # print(preprocessedImg.shape)
+#   # print(preprocessedImg.shape)
 
-  # print(config["camera_settings"]["resolution"])
-  # cv2.namedWindow("resizedImg", cv2.WINDOW_NORMAL)
-  # cv2.imshow("resizedImg", resizedImg)
-  networkImg = np.moveaxis(preprocessedImg, 2, 0)
+#   # print(config["camera_settings"]["resolution"])
+#   # cv2.namedWindow("resizedImg", cv2.WINDOW_NORMAL)
+#   # cv2.imshow("resizedImg", resizedImg)
+#   networkImg = np.moveaxis(preprocessedImg, 2, 0)
 
-  start = time.time()
-  # get steering angle
-  with torch.no_grad():
-    action_idx = model(torch.from_numpy(networkImg/255).float().cuda()).max(0)[1].view(1,1)  
-  angle = config["actions"][action_idx]
-  # apply steering angle to car
-  end = time.time()
+#   start = time.time()
+#   # get steering angle
+#   with torch.no_grad():
+#     action_idx = model(torch.from_numpy(networkImg/255).float().cuda()).max(0)[1].view(1,1)  
+#   angle = config["actions"][action_idx]
+#   # apply steering angle to car
+#   end = time.time()
 
-  Car.steer(angle)
-  print(f'Loop Time: {end-start}')
+#   Car.steer(angle)
+#   print(f'Loop Time: {end-start}')
 
-  # # display what camera sees
-  cv2.namedWindow("preprocessed", cv2.WINDOW_NORMAL)
-  cv2.imshow("preprocessed", preprocessedImg)
+#   # # display what camera sees
+#   cv2.namedWindow("preprocessed", cv2.WINDOW_NORMAL)
+#   cv2.imshow("preprocessed", preprocessedImg)
 
-  if (cv2.waitKey(1) == ord('q')):
-      cv2.destroyAllWindows()
-      break
+#   if (cv2.waitKey(1) == ord('q')):
+#       cv2.destroyAllWindows()
+#       break
