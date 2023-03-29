@@ -31,14 +31,16 @@ class RealSense:
             depthSize = [1280, 720]     # depth camera only allows upto 720P
         else:
             rgbSize = [640, 480]
-            depthSize = [640, 480]
+            # depthSize = [640, 480]
         self.pipeline = rs.pipeline()
         config = rs.config()
+        # config.enable_stream(rs.stream.color, rgbSize[0], rgbSize[1], rs.format.bgr8, 30)
         config.enable_stream(rs.stream.color, rgbSize[0], rgbSize[1], rs.format.bgr8, 30)
-        if enable_depth:
-            config.enable_stream(rs.stream.depth, depthSize[0], depthSize[1], rs.format.z16, 30)      
-        config.enable_stream(rs.stream.accel, rs.format.motion_xyz32f, 250)
-        config.enable_stream(rs.stream.gyro, rs.format.motion_xyz32f, 200)
+
+        # if enable_depth:
+        #     config.enable_stream(rs.stream.depth, depthSize[0], depthSize[1], rs.format.z16, 30)      
+        # config.enable_stream(rs.stream.accel, rs.format.motion_xyz32f, 250)
+        # config.enable_stream(rs.stream.gyro, rs.format.motion_xyz32f, 200)
         # Start streaming
         self.profile = self.pipeline.start(config)
 
@@ -56,7 +58,9 @@ class RealSense:
         #grab 2 seconds of frames to deal with first few frames being bad.
         numFrames = 2 * 30
         for i in range(0, numFrames):
-            self.getData(returnDepth=False)      
+            self.getData(returnDepth=False) 
+
+        # self.pipeline.wait_for_frames()     
         print("RealSense init completed.")
         
 
@@ -75,21 +79,22 @@ class RealSense:
         # start realsense pipeline
         
         rsframes = self.pipeline.wait_for_frames()
-        depth = None
+        # depth = None
         color_frame = rsframes.get_color_frame()
         rgb = np.asanyarray(color_frame.get_data())
 
-        for rsframe in rsframes:
-            # Retrieve IMU data
-            if rsframe.is_motion_frame():
-                accel = self.accel_data(rsframe.as_motion_frame().get_motion_data())
-                gyro = self.gyro_data(rsframe.as_motion_frame().get_motion_data())
-            # Retrieve depth data
-            if self.depth_enabled and returnDepth and rsframe.is_depth_frame():
-                rsframes = self.align.process(rsframes)
-                # Update color and depth frames:
-                depth_frame = rsframes.get_depth_frame()
-                # Convert to numpy array
-                depth = cv2.normalize(~np.asanyarray(depth_frame.get_data()), None, 255, 0, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+        # for rsframe in rsframes:
+        #     # Retrieve IMU data
+        #     # if rsframe.is_motion_frame():
+        #     #     accel = self.accel_data(rsframe.as_motion_frame().get_motion_data())
+        #     #     gyro = self.gyro_data(rsframe.as_motion_frame().get_motion_data())
+        #     # Retrieve depth data
+        #     if self.depth_enabled and returnDepth and rsframe.is_depth_frame():
+        #         rsframes = self.align.process(rsframes)
+        #         # Update color and depth frames:
+        #         # depth_frame = rsframes.get_depth_frame()
+        #         # Convert to numpy array
+        #         # depth = cv2.normalize(~np.asanyarray(depth_frame.get_data()), None, 255, 0, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
         
-        return(time.time(), rgb, depth, accel, gyro)
+        # return(time.time(), rgb)# , depth)# , accel, gyro)
+        return rgb
