@@ -94,18 +94,18 @@ from utils.torch_utils import select_device, load_classifier, time_synchronized,
 
 def detect(opt, device, model, img, save_img=False):
 
-    source, weights, view_img, save_txt, imgsz, trace = opt.source, opt.weights, opt.view_img, opt.save_txt, opt.img_size, not opt.no_trace
-    device = select_device(opt.device)
+    # source, weights, view_img, save_txt, imgsz, trace = opt.source, opt.weights, opt.view_img, opt.save_txt, opt.img_size, not opt.no_trace
+    # device = select_device(opt.device)
 
-    stride = int(model.stride.max())  # model stride
-    imgsz = check_img_size(imgsz, s=stride)  # check img_size
-
-    # # Run inference
-    if device.type != 'cpu':
-        model(torch.zeros(1, 3, imgsz, imgsz).to(device).type_as(next(model.parameters())))  # run once
-
+    # stride = int(model.stride.max())  # model stride
+    # imgsz = check_img_size(imgsz, s=stride)  # check img_size
 
     t0 = time.time()
+    # # # Run inference
+    # if device.type != 'cpu':
+    #     model(torch.zeros(1, 3, imgsz, imgsz).to(device).type_as(next(model.parameters())))  # run once
+
+
     img = img[:,:,::-1].transpose(2,0,1)
     img = np.ascontiguousarray(img)
 
@@ -129,5 +129,9 @@ def detect(opt, device, model, img, save_img=False):
     for i in range(pred[0].shape[0]):
         print(i)
         print(f"sign index : {int(pred[0][i,-1])}")
+        seen_signs.append(int(pred[0][i,-1]))
 
     print(f'Done. ({time.time() - t0:.3f}s)')
+
+    return seen_signs
+

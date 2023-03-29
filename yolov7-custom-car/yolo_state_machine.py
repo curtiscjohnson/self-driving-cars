@@ -18,8 +18,8 @@ from simple_pid import PID
 class StateMachine:
     def __init__(self):
 
-        # self.state = 'start car'
-        self.state = 'check for signs'
+        self.state = 'start car'
+        # self.state = 'check for signs'
         self.lastSign = 'none'
 
         # Initialize YOLO Network
@@ -46,7 +46,9 @@ class StateMachine:
         self.device = select_device(self.opt.device)
         # print(self.device)
         self.model = attempt_load(self.opt.weights, map_location=self.device).cuda()  # load FP32 model
-        self.model.eval()
+        # self.model.eval()
+
+        self.model(torch.zeros(1, 3, 480, 640).to(self.device).type_as(next(self.model.parameters())))  # run once
 
         # car params
         self.speed = 0.8
@@ -181,28 +183,17 @@ class StateMachine:
     def get_current_sign(self):
 
         loop_time = time.time()
-        img = cv2.imread('/home/car/Desktop/self-driving-cars/yolov7-custom-car/2.jpg')
-        # img = self.image
+        # img = cv2.imread('/home/car/Desktop/self-driving-cars/yolov7-custom-car/2.jpg')
+        img = self.image
 
         with torch.no_grad():
-            if self.opt.update:  # update all models (to fix SourceChangeWarning)
-                for self.opt.weights in ['yolov7.pt']:
-                    signs_seen = detect(self.opt, self.device, self.model, img)
-                    strip_optimizer(self.opt.weights)
-            else:         
-               signs_seen = detect(self.opt, self.device, self.model, img)
+            # if self.opt.update:  # update all models (to fix SourceChangeWarning)
+            #     for self.opt.weights in ['yolov7.pt']:
+            #         signs_seen = detect(self.opt, self.device, self.model, img)
+            #         strip_optimizer(self.opt.weights)
+            # else:         
+            signs_seen = detect(self.opt, self.device, self.model, img)
 
-        # img = torch.from_numpy(self.image).float().cuda()
-        # img /= 255.0  
-        # if img.ndimension() == 3:
-        #     img = img.unsqueeze(0)
-        # img = img.reshape(1, 3, 640, 480)
-
-        # with torch.no_grad():   # Calculating gradients would cause a GPU memory leak            
-        #     pred = self.model(img, augment=self.opt.augment)[0]
-
-        # # pred = non_max_suppression(pred, self.opt.conf_thres, self.opt.iou_thres, classes=self.opt.classes, agnostic=self.opt.agnostic_nms)
-        # print(pred.shape)
         labels_seen = self.cleanup_network_output(signs_seen)
         print(f"Sign labels seen: {labels_seen} in {time.time() - loop_time} seconds.")
 
