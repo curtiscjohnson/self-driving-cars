@@ -13,18 +13,17 @@ import json
 import time
 
 
-
 def make_env(display, config):
     env = CustomDuckieTownSim(
         config["camera_settings"],
         config["map_parameters"],
         config["car_parameters"],
         config["actions"],
-        config["max_episode_length"],
         config["yellow_image_noise"],
         config["blackAndWhite"],
         config["use3imgBuffer"],
         config["randomizeCameraParamsOnReset"],
+        config["yellow_features_only"],
         display,
     )
     env = Monitor(env)  # record stats such as returns
@@ -32,7 +31,6 @@ def make_env(display, config):
 
 
 def train(config, sync2wandb=False):
-
     env = make_env(False, config)
     if sync2wandb:
         run = wandb.init(
@@ -76,13 +74,11 @@ def train(config, sync2wandb=False):
 
         run.finish()
 
-        
     else:
-
         run = time.strftime("%Y%m%d-%H%M%S")
         netid = "cjohns94"
         path_to_jdrive = f"/fsg/{netid}/groups/self-driving"
-        
+
         model = DQN(
             config["policy"],
             env,
@@ -99,7 +95,7 @@ def train(config, sync2wandb=False):
             tensorboard_log=f"{path_to_jdrive}/sb3_runs/{run}",
             verbose=0,
         )
-            
+
         model_save_path = f"{path_to_jdrive}/sb3_models/{run}/"
         final_model = model.learn(
             total_timesteps=config["n_timesteps"],
@@ -113,12 +109,16 @@ def train(config, sync2wandb=False):
         )
 
         # open/create file for writing config
-        with open(model_save_path+'config.txt', 'w') as convert_file:
+        with open(model_save_path + "config.txt", "w") as convert_file:
             convert_file.write(json.dumps(config))
 
+
 if __name__ == "__main__":
-    shrinkFactor = 10
-    img_size = (1920//shrinkFactor,1080//shrinkFactor) #! must be (cols, rows) i.e. (width, height)
+    shrinkFactor = 24
+    img_size = (
+        1920 // shrinkFactor,
+        1080 // shrinkFactor,
+    )  #! must be (cols, rows) i.e. (width, height)
     cameraSettings = {
         # "resolution": (1920, 1080),
         "resolution": img_size,
@@ -160,15 +160,14 @@ if __name__ == "__main__":
         "target_update_interval": 1000,
         "train_freq": 4,
         "gradient_steps": 1,
-        "exploration_fraction": 0.1,
+        "exploration_fraction": 0.25,
         "exploration_final_eps": 0.01,
-        "max_episode_length":1800, #60 seconds of driving without crashing, hopefully not memorize one loop so much.
-        "yellow_image_noise":False,
+        "yellow_image_noise": True,
         "blackAndWhite": True,
-        "use3imgBuffer":True, #! only works if blackAndWhite is true
-        "randomizeCameraParamsOnReset":True,
-        "notes":"On auto-20, trying no yellow noise with BW image buffer."
+        "use3imgBuffer": True,  #! only works if blackAndWhite is true
+        "randomizeCameraParamsOnReset": True,
+        "yellow_features_only": True,  # only works if blackAndWhite is true.
+        "notes": "trying training on buffer of yellow only images, downsampled for higher model eval speed. ",
     }
 
     train(config, False)
-
