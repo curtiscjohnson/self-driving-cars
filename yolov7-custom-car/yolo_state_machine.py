@@ -24,8 +24,8 @@ from RealSense import *
 class StateMachine:
     def __init__(self):
 
-        # self.state = 'start car'
-        self.state = 'check for signs'
+        self.state = 'start car'
+        # self.state = 'check for signs'
         self.lastSign = 'none'
 
         # Initialize YOLO Network
@@ -162,59 +162,59 @@ class StateMachine:
         # cv2.imwrite('/home/car/Desktop/self-driving-cars/yolov7_sign_detection_copy/1.jpg', self.image)
         sign = self.get_current_sign()
 
-        # if sign == 'stop_sign':
-        #     self.Car.drive(0)
-        #     if self.lastSign != 'stop_sign':
-        #         self.lastSign = 'stop_sign'
-        #         time.sleep(2)
-        # elif sign == 'school_zone':
-        #     self.Car.drive(0)
-        #     if self.lastSign != 'school_zone':
-        #         self.lastSign = 'school_zone'
-        #         self.Car.music(4)
-        # elif sign == 'construction_zone':
-        #     self.Car.drive(0)
-        #     if self.lastSign != 'construction_zone':
-        #         self.lastSign = 'construction_zone'
-        #         self.Car.music(2)
-        # elif sign == 'do_not_pass':
-        #     self.Car.drive(0)
-        #     if self.lastSign != 'do_not_pass':
-        #         self.lastSign = 'do_not_pass'
-        #         self.Car.music(0)
-        # if sign == 'speed_limit':
-        #     self.Car.drive(0)
-        #     if self.lastSign != 'speed_limit':
-        #         self.lastSign = 'speed_limit'
-        #         self.Car.music(1)
-        # elif sign == 'deer_crossing':
-        #     self.Car.drive(0)
-        #     if self.lastSign != 'deer_crossing':
-        #         self.lastSign = 'deer_crossing'
-        #         self.Car.music(5)
-        # elif sign == 'rr_x':
-        #     self.Car.drive(0)
-        #     if self.lastSign != 'rr_x':
-        #         self.lastSign = 'rr_x'
-        #         self.Car.music(3)
-        # elif sign == 'rr_circle':
-        #     self.Car.drive(0)
-        #     if self.lastSign != 'rr_circle':
-        #         self.lastSign = 'rr_circle'
-        #         self.Car.music(3)
-        # elif sign == 'stop_light':
-        #     self.Car.drive(0)
-        #     if self.lastSign != 'stop_light':
-        #         self.lastSign = 'stop_light'
-        #         self.Car.music(7)
+        if sign == 'stop_sign':
+            self.Car.drive(0)
+            if self.lastSign != 'stop_sign':
+                self.lastSign = 'stop_sign'
+                time.sleep(2)
+        elif sign == 'school_zone':
+            self.Car.drive(0)
+            if self.lastSign != 'school_zone':
+                self.lastSign = 'school_zone'
+                self.Car.music(4)
+        elif sign == 'construction_zone':
+            self.Car.drive(0)
+            if self.lastSign != 'construction_zone':
+                self.lastSign = 'construction_zone'
+                self.Car.music(2)
+        elif sign == 'do_not_pass':
+            self.Car.drive(0)
+            if self.lastSign != 'do_not_pass':
+                self.lastSign = 'do_not_pass'
+                self.Car.music(0)
+        if sign == 'speed_limit':
+            self.Car.drive(0)
+            if self.lastSign != 'speed_limit':
+                self.lastSign = 'speed_limit'
+                self.Car.music(1)
+        elif sign == 'deer_crossing':
+            self.Car.drive(0)
+            if self.lastSign != 'deer_crossing':
+                self.lastSign = 'deer_crossing'
+                self.Car.music(5)
+        elif sign == 'rr_x':
+            self.Car.drive(0)
+            if self.lastSign != 'rr_x':
+                self.lastSign = 'rr_x'
+                self.Car.music(3)
+        elif sign == 'rr_circle':
+            self.Car.drive(0)
+            if self.lastSign != 'rr_circle':
+                self.lastSign = 'rr_circle'
+                self.Car.music(3)
+        elif sign == 'stop_light':
+            self.Car.drive(0)
+            if self.lastSign != 'stop_light':
+                self.lastSign = 'stop_light'
+                self.Car.music(7)
 
-        # self.state = 'drive'
+        self.state = 'drive'
 
     def get_current_sign(self):
 
         loop_time = time.time()
-        img = cv2.imread('8.jpg')
-        # img = self.image
+        # img = cv2.imread('8.jpg')
+        img = self.image
 
         with torch.no_grad():        
             signs_seen, signs_seen_location, signs_seen_confidence = detect(self.opt, self.device, self.yolo_model, img)
@@ -222,16 +222,16 @@ class StateMachine:
         labels_seen, labels_loc, labels_confidence = self.cleanup_network_output(signs_seen, signs_seen_location, signs_seen_confidence)
         print(f"\nSign: {labels_seen}, Location: {labels_loc}, Confidence: {labels_confidence} in {time.time() - loop_time} seconds.")
 
-        if labels_seen != 'none':
-            print(f"Sign Bounding Box Area: {self.calculate_bounding_box_area(labels_loc)}")
-            self.draw_bounding_box(img, labels_loc)
+        # if labels_seen != 'none':
+        #     print(f"Sign Bounding Box Area: {self.calculate_bounding_box_area(labels_loc)}")
+        #     self.draw_bounding_box(img, labels_loc)
 
         return labels_seen
 
     def cleanup_network_output(self, signs_seen, signs_seen_location, signs_seen_confidence):
 
         # ['stop_sign','school_zone','construction_zone', 'do_not_pass','speed_limit','deer_crossing','rr_x','rr_circle','stop_light']
-        minimumArea = [10400., 10000., 8500., 1000., 1000., 12000., 200., 1000., 13000.]
+        minimumArea = [9500., 18000., 13500., 4500., 6500., 11500., 6000., 12500., 10000.]
 
         # signs_seen is a list of indexes of signs that were seen in the image
         if len(signs_seen) > 0:
