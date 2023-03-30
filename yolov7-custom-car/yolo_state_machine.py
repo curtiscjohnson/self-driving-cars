@@ -13,13 +13,14 @@ from Arduino import Arduino
 from RealSense import *
 import PID_Code.lightning_mcqueen as lm
 from simple_pid import PID
+import numpy as np
 
 # Class that operates as a state machine to keep track of signs and driving for the car
 class StateMachine:
     def __init__(self):
 
-        self.state = 'start car'
-        # self.state = 'check for signs'
+        # self.state = 'start car'
+        self.state = 'check for signs'
         self.lastSign = 'none'
 
         # Initialize YOLO Network
@@ -43,11 +44,9 @@ class StateMachine:
         parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
         parser.add_argument('--no-trace', action='store_false', help='don`t trace model')
         self.opt = parser.parse_args()
-        self.device = select_device(self.opt.device)
-        # print(self.device)
-        self.model = attempt_load(self.opt.weights, map_location=self.device).cuda()  # load FP32 model
-        # self.model.eval()
 
+        self.device = select_device(self.opt.device)
+        self.model = attempt_load(self.opt.weights, map_location=self.device).cuda()  # load FP32 model
         self.model(torch.zeros(1, 3, 480, 640).to(self.device).type_as(next(self.model.parameters())))  # run once
 
         # car params
@@ -131,82 +130,126 @@ class StateMachine:
         # cv2.imwrite('/home/car/Desktop/self-driving-cars/yolov7_sign_detection_copy/1.jpg', self.image)
         sign = self.get_current_sign()
 
+        # if sign == 'stop_sign':
+        #     self.Car.drive(0)
+        #     if self.lastSign != 'stop_sign':
+        #         self.lastSign = 'stop_sign'
+        #         time.sleep(2)
+        # elif sign == 'school_zone':
+        #     self.Car.drive(0)
+        #     if self.lastSign != 'school_zone':
+        #         self.lastSign = 'school_zone'
+        #         self.Car.music(4)
+        # elif sign == 'construction_zone':
+        #     self.Car.drive(0)
+        #     if self.lastSign != 'construction_zone':
+        #         self.lastSign = 'construction_zone'
+        #         self.Car.music(2)
+        # elif sign == 'do_not_pass':
+        #     self.Car.drive(0)
+        #     if self.lastSign != 'do_not_pass':
+        #         self.lastSign = 'do_not_pass'
+        #         self.Car.music(0)
+        # if sign == 'speed_limit':
+        #     self.Car.drive(0)
+        #     if self.lastSign != 'speed_limit':
+        #         self.lastSign = 'speed_limit'
+        #         self.Car.music(1)
+        # elif sign == 'deer_crossing':
+        #     self.Car.drive(0)
+        #     if self.lastSign != 'deer_crossing':
+        #         self.lastSign = 'deer_crossing'
+        #         self.Car.music(5)
+        # elif sign == 'rr_x':
+        #     self.Car.drive(0)
+        #     if self.lastSign != 'rr_x':
+        #         self.lastSign = 'rr_x'
+        #         self.Car.music(3)
+        # elif sign == 'rr_circle':
+        #     self.Car.drive(0)
+        #     if self.lastSign != 'rr_circle':
+        #         self.lastSign = 'rr_circle'
+        #         self.Car.music(3)
+        # elif sign == 'stop_light':
+        #     self.Car.drive(0)
+        #     if self.lastSign != 'stop_light':
+        #         self.lastSign = 'stop_light'
+        #         self.Car.music(7)
 
-        if sign == 'stop_sign':
-            self.Car.drive(0)
-            if self.lastSign != 'stop_sign':
-                self.lastSign = 'stop_sign'
-                time.sleep(2)
-        elif sign == 'school_zone':
-            self.Car.drive(0)
-            if self.lastSign != 'school_zone':
-                self.lastSign = 'school_zone'
-                self.Car.music(4)
-        elif sign == 'construction_zone':
-            self.Car.drive(0)
-            if self.lastSign != 'construction_zone':
-                self.lastSign = 'construction_zone'
-                self.Car.music(2)
-        elif sign == 'do_not_pass':
-            self.Car.drive(0)
-            if self.lastSign != 'do_not_pass':
-                self.lastSign = 'do_not_pass'
-                self.Car.music(0)
-        if sign == 'speed_limit':
-            self.Car.drive(0)
-            if self.lastSign != 'speed_limit':
-                self.lastSign = 'speed_limit'
-                self.Car.music(1)
-        elif sign == 'deer_crossing':
-            self.Car.drive(0)
-            if self.lastSign != 'deer_crossing':
-                self.lastSign = 'deer_crossing'
-                self.Car.music(5)
-        elif sign == 'rr_x':
-            self.Car.drive(0)
-            if self.lastSign != 'rr_x':
-                self.lastSign = 'rr_x'
-                self.Car.music(3)
-        elif sign == 'rr_circle':
-            self.Car.drive(0)
-            if self.lastSign != 'rr_circle':
-                self.lastSign = 'rr_circle'
-                self.Car.music(3)
-        elif sign == 'stop_light':
-            self.Car.drive(0)
-            if self.lastSign != 'stop_light':
-                self.lastSign = 'stop_light'
-                self.Car.music(7)
-
-        self.state = 'drive'
+        # self.state = 'drive'
 
     def get_current_sign(self):
 
         loop_time = time.time()
-        # img = cv2.imread('/home/car/Desktop/self-driving-cars/yolov7-custom-car/2.jpg')
-        img = self.image
+        img = cv2.imread('4.jpg')
+        # img = self.image
 
-        with torch.no_grad():
-            # if self.opt.update:  # update all models (to fix SourceChangeWarning)
-            #     for self.opt.weights in ['yolov7.pt']:
-            #         signs_seen = detect(self.opt, self.device, self.model, img)
-            #         strip_optimizer(self.opt.weights)
-            # else:         
-            signs_seen = detect(self.opt, self.device, self.model, img)
+        with torch.no_grad():        
+            signs_seen, signs_seen_location, signs_seen_confidence = detect(self.opt, self.device, self.model, img)
 
-        labels_seen = self.cleanup_network_output(signs_seen)
-        print(f"Sign labels seen: {labels_seen} in {time.time() - loop_time} seconds.")
+        labels_seen, labels_loc, labels_confidence = self.cleanup_network_output(signs_seen, signs_seen_location, signs_seen_confidence)
+        print(f"\nSign: {labels_seen}, Location: {labels_loc}, Confidence: {labels_confidence} in {time.time() - loop_time} seconds.")
+
+        print(f"Sign Bounding Box Area: {self.calculate_bounding_box_area(labels_loc)}")
+        self.draw_bounding_box(img, labels_loc)
 
         return labels_seen
 
-    def cleanup_network_output(self, signs_seen):
+    def cleanup_network_output(self, signs_seen, signs_seen_location, signs_seen_confidence):
+
+        # ['stop_sign','school_zone','construction_zone', 'do_not_pass','speed_limit','deer_crossing','rr_x','rr_circle','stop_light']
+        minimumArea = [5000., 1000., 1000., 1000., 1000., 1000., 200., 1000., 1000.]
+
         # signs_seen is a list of indexes of signs that were seen in the image
         if len(signs_seen) > 0:
-            return self.label_names[signs_seen[0]]
-            #todo: figure out what to do with multiple later -Curtis
-        else:
-            return "none"
 
+            bigEnoughSigns = []
+            bigEnoughSignsLocations = []
+            bigEnoughSignsConfidence = []
+
+            for i in range(0, len(signs_seen)):
+
+                sign_loc = signs_seen_location[i].cpu().numpy()
+                sign_area = self.calculate_bounding_box_area(sign_loc)
+
+                if sign_area > minimumArea[signs_seen[i]]:
+                    bigEnoughSigns.append(self.label_names[signs_seen[i]])
+                    bigEnoughSignsLocations.append(signs_seen_location[i].cpu().numpy())
+                    bigEnoughSignsConfidence.append(signs_seen_confidence[i].cpu().numpy())
+
+            signConfidenceIndex = np.argmax(bigEnoughSignsConfidence)
+
+            return bigEnoughSigns[signConfidenceIndex], bigEnoughSignsLocations[signConfidenceIndex], bigEnoughSignsConfidence[signConfidenceIndex]
+
+        else:
+            return 'none', 'none', 'none'
+
+    def calculate_bounding_box_area(self, labels_loc):
+
+        length = np.abs(labels_loc[0] - labels_loc[2])
+        width = np.abs(labels_loc[1] - labels_loc[3])
+
+        return length * width
+
+    def draw_bounding_box(self, img, labels_loc):
+
+        start_point1 = (int(labels_loc[0]), int(labels_loc[1]))
+        end_point1 = (int(labels_loc[2]), int(labels_loc[1]))
+        start_point2 = (int(labels_loc[2]), int(labels_loc[1]))
+        end_point2 = (int(labels_loc[2]), int(labels_loc[3]))
+        start_point3 = (int(labels_loc[2]), int(labels_loc[3]))
+        end_point3 = (int(labels_loc[0]), int(labels_loc[3]))
+        start_point4 = (int(labels_loc[0]), int(labels_loc[3]))
+        end_point4 = (int(labels_loc[0]), int(labels_loc[1]))
+
+        imageWithBoundingBox = cv2.line(img, start_point1, end_point1, (255, 0, 0), 2) 
+        imageWithBoundingBox = cv2.line(img, start_point2, end_point2, (255, 0, 0), 2) 
+        imageWithBoundingBox = cv2.line(img, start_point3, end_point3, (255, 0, 0), 2) 
+        imageWithBoundingBox = cv2.line(img, start_point4, end_point4, (255, 0, 0), 2)
+
+        cv2.imshow("car", imageWithBoundingBox)
+        if (cv2.waitKey(1) == ord('q')):
+            cv2.destroyAllWindows()
 
 if __name__ == "__main__":
 
