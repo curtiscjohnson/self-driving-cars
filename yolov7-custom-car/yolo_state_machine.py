@@ -213,7 +213,7 @@ class StateMachine:
     def get_current_sign(self):
 
         loop_time = time.time()
-        img = cv2.imread('4.jpg')
+        img = cv2.imread('8.jpg')
         # img = self.image
 
         with torch.no_grad():        
@@ -222,15 +222,16 @@ class StateMachine:
         labels_seen, labels_loc, labels_confidence = self.cleanup_network_output(signs_seen, signs_seen_location, signs_seen_confidence)
         print(f"\nSign: {labels_seen}, Location: {labels_loc}, Confidence: {labels_confidence} in {time.time() - loop_time} seconds.")
 
-        print(f"Sign Bounding Box Area: {self.calculate_bounding_box_area(labels_loc)}")
-        self.draw_bounding_box(img, labels_loc)
+        if labels_seen != 'none':
+            print(f"Sign Bounding Box Area: {self.calculate_bounding_box_area(labels_loc)}")
+            self.draw_bounding_box(img, labels_loc)
 
         return labels_seen
 
     def cleanup_network_output(self, signs_seen, signs_seen_location, signs_seen_confidence):
 
         # ['stop_sign','school_zone','construction_zone', 'do_not_pass','speed_limit','deer_crossing','rr_x','rr_circle','stop_light']
-        minimumArea = [5000., 1000., 1000., 1000., 1000., 1000., 200., 1000., 1000.]
+        minimumArea = [10400., 10000., 8500., 1000., 1000., 12000., 200., 1000., 13000.]
 
         # signs_seen is a list of indexes of signs that were seen in the image
         if len(signs_seen) > 0:
@@ -248,6 +249,10 @@ class StateMachine:
                     bigEnoughSigns.append(self.label_names[signs_seen[i]])
                     bigEnoughSignsLocations.append(signs_seen_location[i].cpu().numpy())
                     bigEnoughSignsConfidence.append(signs_seen_confidence[i].cpu().numpy())
+
+            if not bigEnoughSigns:
+                print('here')
+                return 'none', 'none', 'none'
 
             signConfidenceIndex = np.argmax(bigEnoughSignsConfidence)
 
