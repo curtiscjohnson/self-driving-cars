@@ -5,117 +5,98 @@ import cv2
 import time as tm
 import torch
 import torch.nn as nn
-import zipfile
-# from stable_baselines3 import DQN
-from utils_network import NatureCNN
-from gym import spaces
-import json
+from load_model_on_hardware_utils import setup_loading_model
 from img_utils import preprocess_image
+import argparse
+from simple_pid import PID
+
+from PID_Code.lightning_mcqueen import get_yellow_centers
 
 
-def setup_loading_model(config):
-    N_CHANNELS = 3
-    (WIDTH, HEIGHT) = config["camera_settings"]["resolution"]
-    observation_space = spaces.Box(
-        low=0, high=1, shape=(N_CHANNELS, HEIGHT, WIDTH), dtype=np.uint8
-    )
-    # model = DQN.load("./sb3_models/local/650/650_model_760000_steps.zip")
-    model = NatureCNN(observation_space, config["actions"], normalized_image=True)
+parser = argparse.ArgumentParser()
 
-    archive = zipfile.ZipFile("/home/car/Desktop/self-driving-cars/sb3_models/local/curtis-20230325-124016/curtis-20230325-124016_model_800000_steps.zip", 'r')
-    path = archive.extract('policy.pth')
-    state_dict = torch.load(path)
-    # print('\nState Dict:', state_dict.keys(), '\n')
+parser.add_argument('--control', type=str, default='rl', help='rl or pid')
+parser.add_argument('--yolo', type=bool, default=True, help='True: use yolo for sign recognition') 
+parser.add_argument('--speed', type=float, default=0.8, help='.8 to 3.0')
+parser.add_argument('--display', type=bool, default=True, help='True: show what camera is seeing')
+opt = parser.parse_args()
 
-    new_state_dict = {}
-    for old_key in state_dict.keys():
-        if "q_net.q_net" in old_key:
-          new_key = "action_output." + old_key.split(".")[-1]
-        elif "q_net_target" not in old_key:
-          new_key = ".".join(old_key.split(".")[2:])
-  
-        new_state_dict[new_key] = state_dict[old_key]
-    
-    # print('\nNew State Dict:', new_state_dict.keys(), '\n')
-    model.load_state_dict(new_state_dict)
+if opt.control == 'rl':
+    # load in RL model
+    model_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/curtis-20230325-124016'
+    zip_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/curtis-20230325-124016/curtis-20230325-124016_model_800000_steps.zip'
+    model, config = setup_loading_model(model_path, zip_path)
 
-    return model
-
-path = r'/fsg/hps22/self-driving-cars/testimg.jpg'
-preprocessedImg = preprocess_image(cv2.imread(path))
-cv2.imshow("car", preprocessedImg)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
-
-# load in RL model
-model_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/curtis-20230325-124016'
-with open(model_path+"/config.txt", 'r') as f:
-  config = json.load(f)
-model = setup_loading_model(config)
-
-print(config)
-
-# initialize realsense camera
-enableDepth = True
-rs = RealSense("/dev/video2", RS_VGA, enableDepth)
-writer = None
+elif opt.control == 'pid':
+  ## SETUP PID Controller
+  pid = PID()
+  pid.Ki = -.01*0
+  pid.Kd = -.01*0
+  pid.Kp = -30/300 #degrees per pixel
+  frameUpdate = 1
+  pid.sample_time = frameUpdate/30.0
+  pid.output_limits = (-30,30)
+  desXCoord = 640//2 #!hard coded to 640x480 
+  pid.setpoint = desXCoord
+else:
+  raise argparse.ArgumentTypeError("wrong contorl method")
 
 # initialize car
 Car = Arduino("/dev/ttyUSB0", 115200)  
 Car.zero(1440)
-Car.pid(1)
+Car.pid(True)
+
+# initialize realsense camera
+enableDepth = True
+rs = RealSense("/dev/video2", RS_VGA)
+writer = None
 
 # start camera
 rgb = rs.getData(False)
 
 # start car
-fastSpeed = 0.8
+fastSpeed = opt.speed
 Car.drive(fastSpeed)
 
-model.eval()
-model.cuda()
-
+  
 # driving loop
 while True:
-  Car.drive(fastSpeed)
-
   # get data from camera
   img = rs.getData(False)
 
-  resizedImg = cv2.resize(img, tuple(config["camera_settings"]["resolution"]))
+  if opt.control == 'rl':
+    # prepare image to go into network
+    preprocessedImg = preprocess_image(
+      img,
+      removeBottomStrip=True, #should always do this on hardware
+      blackAndWhite=config["blackAndWhite"],
+      addYellowNoise=False, #no need to add noise to real world
+      use3imgBuffer=config["use3imgBuffer"],
+      yellow_features_only=config["yellow_features_only"]
+      )
+    
+    networkImg = np.moveaxis(preprocessedImg, 2, 0)
 
-  # prepare image to go into network
-  preprocessedImg = preprocess_image(
-    resizedImg,
-    removeBottomStrip=True, #should always do this on hardware
-    blackAndWhite=config["blackAndWhite"],
-    addYellowNoise=False, #no need to add noise to real world
-    use3imgBuffer=config["use3imgBuffer"],
-    yellow_features_only=config["yellow_features_only"]
-    )
+    # get steering angle
+    with torch.no_grad():
+      action_idx = model(torch.from_numpy(networkImg/255).float().cuda()).max(0)[1].view(1,1)  
+    angle = config["actions"][action_idx]
+    
+  elif opt.control == 'pid':
+    # prepare image to go into network
+    centers = get_yellow_centers(img)
+    if centers != "None":
+      angle = pid(centers[-1][0])
 
-  # print(preprocessedImg.shape)
 
-  # print(config["camera_settings"]["resolution"])
-  # cv2.namedWindow("resizedImg", cv2.WINDOW_NORMAL)
-  # cv2.imshow("resizedImg", resizedImg)
-  networkImg = np.moveaxis(preprocessedImg, 2, 0)
-
-  start = time.time()
-  # get steering angle
-  with torch.no_grad():
-    action_idx = model(torch.from_numpy(networkImg/255).float().cuda()).max(0)[1].view(1,1)  
-  angle = config["actions"][action_idx]
-  # apply steering angle to car
-  end = time.time()
-
+  Car.drive(fastSpeed)
   Car.steer(angle)
-  print(f'Loop Time: {end-start}')
 
-  # # display what camera sees
-  cv2.namedWindow("preprocessed", cv2.WINDOW_NORMAL)
-  cv2.imshow("preprocessed", preprocessedImg)
+  # display what camera sees
+  if opt.display:
+    cv2.namedWindow("preprocessed", cv2.WINDOW_NORMAL)
+    cv2.imshow("preprocessed", img)
 
-  if (cv2.waitKey(1) == ord('q')):
-      cv2.destroyAllWindows()
-      break
+    if (cv2.waitKey(1) == ord('q')):
+        cv2.destroyAllWindows()
+        break

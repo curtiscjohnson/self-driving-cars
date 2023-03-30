@@ -14,6 +14,8 @@ def preprocess_image(
     # cv2.imshow("input", BGRimg)
     # cv2.waitKey(0)
 
+    assert BGRimg.shape == (640,480)
+
     BGRimg = cv2.bilateralFilter(
         BGRimg, 3, 50, 50
     )  # theoretically good at removing noise but keeping sharp lines.
@@ -104,4 +106,4 @@ def preprocess_image(
         blackImg[mask > 0] = (0, 0, 255)
 
 
-    return blackImg
+    return cv2.resize(blackImg, (100,100))
