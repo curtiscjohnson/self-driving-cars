@@ -6,3 +6,6 @@ runs/*
 *.pyc
 *.zip
 *.pt
+*.jpg
+*.png
+*.yaml
