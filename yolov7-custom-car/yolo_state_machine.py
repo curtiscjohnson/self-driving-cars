@@ -1,19 +1,24 @@
-import sys
 import argparse
-import torch
-import cv2
+import sys
 import time
+
+import cv2
+import torch
+
 sys.path.append('..')
 sys.path.append('/fsg/hps22/self-driving-cars/')
-from detect_custom import detect
-from utils.torch_utils import select_device, load_classifier, time_synchronized, TracedModel
-from utils.general import check_img_size, check_requirements, check_imshow, non_max_suppression, apply_classifier, scale_coords, xyxy2xywh, strip_optimizer, set_logging, increment_path
-from models.experimental import attempt_load
-from Arduino import Arduino
-from RealSense import *
-import PID_Code.lightning_mcqueen as lm
-from simple_pid import PID
 import numpy as np
+from detect_custom import detect
+from models.experimental import attempt_load
+from simple_pid import PID
+from utils.torch_utils import select_device
+
+from Arduino import Arduino
+from img_utils import preprocess_image
+from load_model_on_hardware_utils import setup_loading_model
+from PID_Code.lightning_mcqueen import get_yellow_centers
+from RealSense import *
+
 
 # Class that operates as a state machine to keep track of signs and driving for the car
 class StateMachine:
@@ -43,14 +48,19 @@ class StateMachine:
         parser.add_argument('--name', default='exp', help='save results to project/name')
         parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
         parser.add_argument('--no-trace', action='store_false', help='don`t trace model')
+
+        parser.add_argument('--control', type=str, default='rl', help='rl or pid')
+        parser.add_argument('--yolo', type=bool, default=True, help='True: use yolo for sign recognition') 
+        parser.add_argument('--speed', type=float, default=0.8, help='.8 to 3.0')
+        parser.add_argument('--display', type=bool, default=True, help='True: show what camera is seeing')
         self.opt = parser.parse_args()
 
         self.device = select_device(self.opt.device)
-        self.model = attempt_load(self.opt.weights, map_location=self.device).cuda()  # load FP32 model
-        self.model(torch.zeros(1, 3, 480, 640).to(self.device).type_as(next(self.model.parameters())))  # run once
+        self.yolo_model = attempt_load(self.opt.weights, map_location=self.device).cuda()  # load FP32 model
+        self.yolo_model(torch.zeros(1, 3, 480, 640).to(self.device).type_as(next(self.yolo_model.parameters())))  # run once
 
         # car params
-        self.speed = 0.8
+        self.speed = self.opt.speed
 
         self.label_names = ['stop_sign','school_zone','construction_zone', 'do_not_pass','speed_limit','deer_crossing','rr_x','rr_circle','stop_light']
 
@@ -71,25 +81,33 @@ class StateMachine:
                 break
 
     def start_car(self):
+        if self.opt.control == 'rl':
+            # load in RL model
+            model_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/curtis-20230325-124016'
+            zip_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/curtis-20230325-124016/curtis-20230325-124016_model_800000_steps.zip'
+            self.rl_model, self.config = setup_loading_model(model_path, zip_path)
+
+        elif self.opt.control == 'pid':
+            ## SETUP PID Controller
+            self.pid = PID()
+            self.pid.Ki = -.01*0
+            self.pid.Kd = -.01*0
+            self.pid.Kp = -30/300 #degrees per pixel
+            frameUpdate = 1
+            self.pid.sample_time = frameUpdate/30.0
+            self.pid.output_limits = (-30,30)
+            desXCoord = 640//2 #!hard coded to 640x480 
+            self.pid.setpoint = desXCoord
+        else:
+            raise argparse.ArgumentTypeError("wrong contorl method")
+
 
         self.Car = Arduino("/dev/ttyUSB0", 115200)
         self.Car.zero(1440)
         self.Car.pid(1)          
 
-        enableDepth = True
-        self.rs = RealSense("/dev/video2", RS_VGA, enableDepth)
+        self.rs = RealSense("/dev/video2", RS_VGA)
         self.image = self.rs.getData(False)
-
-        self.pid = PID()
-        self.pid.Ki = -.01*0
-        self.pid.Kd = -.01*0
-        self.pid.Kp = -30/250
-        self.frameUpdate = 1
-        self.pid.sample_time = self.frameUpdate/30.0
-        self.pid.output_limits = (-30,30)
-        desXCoord = self.image.shape[0]*3/5
-        self.pid.setpoint = desXCoord
-        self.i = 0
 
         self.checkForSignsIndex = 0
 
@@ -100,29 +118,43 @@ class StateMachine:
         self.Car.drive(self.speed)
 
         self.image = self.rs.getData(False)
-        if self.i % self.frameUpdate == 0:
 
-            self.i = 0
+        # display what camera sees
+        if self.opt.display:
+            cv2.namedWindow("car_raw", cv2.WINDOW_NORMAL)
+            cv2.imshow("car_Raw", self.image)
 
-            centers = lm.get_yellow_centers(self.image)
+            if (cv2.waitKey(1) == ord('q')):
+                cv2.destroyAllWindows()
 
+        if self.opt.control == 'rl':
+            # prepare image to go into network
+            preprocessedImg = preprocess_image(
+                self.image,
+                removeBottomStrip=True, #should always do this on hardware
+                blackAndWhite=self.config["blackAndWhite"],
+                addYellowNoise=False, #no need to add noise to real world
+                use3imgBuffer=self.config["use3imgBuffer"],
+                yellow_features_only=self.config["yellow_features_only"]
+            )
+            
+            networkImg = np.moveaxis(preprocessedImg, 2, 0)
+
+            # get steering angle
+            with torch.no_grad():
+                action_idx = self.rl_model(torch.from_numpy(networkImg/255).float().cuda()).max(0)[1].view(1,1)  
+                angle = self.config["actions"][action_idx]
+        
+        elif self.opt.control == 'pid':
+            # prepare image to go into network
+            centers = get_yellow_centers(self.image)
             if centers != "None":
-                blobToFollowCoords = centers[-1]
-                blobX = blobToFollowCoords[0]
-                angle = self.pid(blobX)
-                self.Car.steer(angle)
-        self.i+=1
-        self.checkForSignsIndex += 1
+                angle = self.pid(centers[-1][0])
+
+        self.Car.steer(angle)
 
         if self.checkForSignsIndex % 7 == 0:
             self.state = 'check for signs'
-
-    def preprocess_image(self, image):
-
-        # newImage = image[:, 320:]
-        newImage = cv2.resize(image, (128, 128))
-
-        return newImage
 
     def check_for_signs(self):
 
@@ -185,7 +217,7 @@ class StateMachine:
         # img = self.image
 
         with torch.no_grad():        
-            signs_seen, signs_seen_location, signs_seen_confidence = detect(self.opt, self.device, self.model, img)
+            signs_seen, signs_seen_location, signs_seen_confidence = detect(self.opt, self.device, self.yolo_model, img)
 
         labels_seen, labels_loc, labels_confidence = self.cleanup_network_output(signs_seen, signs_seen_location, signs_seen_confidence)
         print(f"\nSign: {labels_seen}, Location: {labels_loc}, Confidence: {labels_confidence} in {time.time() - loop_time} seconds.")
