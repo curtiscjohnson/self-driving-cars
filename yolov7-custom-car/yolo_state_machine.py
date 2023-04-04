@@ -74,7 +74,7 @@ class StateMachine:
             elif self.state == 'drive':
                 self.drive()
 
-            elif self.state == 'check for signs':
+            elif self.state == 'check for signs' and self.opt.yolo:
                 self.check_for_signs()
             
             elif self.state == 'terminate':
@@ -111,7 +111,10 @@ class StateMachine:
 
         self.checkForSignsIndex = 0
 
-        self.state = 'check for signs'
+        if self.opt.yolo:
+            self.state = 'check for signs'
+        else:
+            self.state = 'drive'
 
     def drive(self):
 
@@ -153,7 +156,7 @@ class StateMachine:
 
         self.Car.steer(angle)
 
-        if self.checkForSignsIndex % 7 == 0:
+        if self.checkForSignsIndex % 7 == 0 and self.opt.yolo:
             self.state = 'check for signs'
 
     def check_for_signs(self):
