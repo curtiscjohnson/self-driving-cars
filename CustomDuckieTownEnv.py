@@ -55,6 +55,7 @@ class CustomDuckieTownSim(gym.Env):
         self.addYellowNoise = addYellowNoise
         self.blackAndWhite = blackAndWhite
         self.use3imgBuffer = use3imgBuffer
+        self.steering_angle = 0
         self.randomizeCameraParamOnReset = randomizeCameraParamsOnReset
         if use3imgBuffer:
             self.initial_obs = [np.zeros((HEIGHT, WIDTH))] * 3
@@ -81,8 +82,10 @@ class CustomDuckieTownSim(gym.Env):
         return processed_img.astype(np.uint8)
 
     def step(self, action):
+        self.steering_angle+=self.action_angles[action]/3
+        self.steering_angle = np.clip(self.steering_angle, -30, 30)
         raw_img, reward, self.done = self.sim.step(
-            steer=self.action_angles[action], speed=0.8, display=self.display
+            steer=self.steering_angle, speed=0.8, display=self.display
         )
         self.info = {}
         #! sim.step() returns raw image as height x width x channels.
@@ -113,7 +116,9 @@ class CustomDuckieTownSim(gym.Env):
             _type_: _description_
         """
 
+        
         self.done = False
+        self.steering_angle = 0
         self.num_steps_taken = 0
         self.observation_buffer = deque(self.initial_obs, maxlen=3)
 

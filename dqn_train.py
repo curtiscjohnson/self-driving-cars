@@ -30,91 +30,49 @@ def make_env(display, config):
     return env
 
 
-def train(config, sync2wandb=False):
-    env = make_env(False, config)
-    if sync2wandb:
-        run = wandb.init(
-            project="sb3",
-            config=config,
-            sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
-            monitor_gym=True,  # auto-upload the videos of agents playing the game
-            save_code=True,  # optional
-        )
+def train(config, display=False):
+    env = make_env(display, config)
+ 
+    netid = "cjohns94"
+    run = time.strftime(netid+"-%Y%m%d-%H%M%S")
+    path_to_jdrive = f"/fsg/{netid}/groups/self-driving"
 
-        model = DQN(
-            config["policy"],
-            env,
-            learning_rate=config["learning_rate"],
-            batch_size=config["batch_size"],
-            buffer_size=config["buffer_size"],
-            learning_starts=config["learning_starts"],
-            gamma=config["gamma"],
-            target_update_interval=config["target_update_interval"],
-            train_freq=config["train_freq"],
-            gradient_steps=config["gradient_steps"],
-            exploration_fraction=config["exploration_fraction"],
-            exploration_final_eps=config["exploration_final_eps"],
-            tensorboard_log=f"sb3_runs/wandb/{run.id}",
-            verbose=0,
-        )
+    model = DQN(
+        config["policy"],
+        env,
+        learning_rate=config["learning_rate"],
+        batch_size=config["batch_size"],
+        buffer_size=config["buffer_size"],
+        learning_starts=config["learning_starts"],
+        gamma=config["gamma"],
+        target_update_interval=config["target_update_interval"],
+        train_freq=config["train_freq"],
+        gradient_steps=config["gradient_steps"],
+        exploration_fraction=config["exploration_fraction"],
+        exploration_final_eps=config["exploration_final_eps"],
+        tensorboard_log=f"{path_to_jdrive}/sb3_runs/{run}",
+        verbose=0,
+    )
 
-        final_model = model.learn(
-            total_timesteps=config["n_timesteps"],
-            tb_log_name=model.tensorboard_log,
-            callback=WandbCallback(
-                # gradient_save_freq=100,
-                model_save_path=f"sb3_models/wandb/{run.id}",
-                verbose=0,
-                model_save_freq=10000,
-                log="all",
-            ),
-            # https://github.com/wandb/wandb/blob/72eeaa2c975cddd540a72223fa11c3f2537371a6/wandb/integration/sb3/sb3.py
-            # ! I think wandb overwrites model.zip every time...
-        )
+    model_save_path = f"{path_to_jdrive}/sb3_models/{run}/"
+    final_model = model.learn(
+        total_timesteps=config["n_timesteps"],
+        # tb_log_name=f"{run}",
+        progress_bar=True,
+        callback=CheckpointCallback(
+            save_freq=1e5,
+            save_path=model_save_path,
+            name_prefix=f"{run}_model",
+        ),
+    )
 
-        run.finish()
-
-    else:
-        run = time.strftime("%Y%m%d-%H%M%S")
-        netid = "cjohns94"
-        path_to_jdrive = f"/fsg/{netid}/groups/self-driving"
-
-        model = DQN(
-            config["policy"],
-            env,
-            learning_rate=config["learning_rate"],
-            batch_size=config["batch_size"],
-            buffer_size=config["buffer_size"],
-            learning_starts=config["learning_starts"],
-            gamma=config["gamma"],
-            target_update_interval=config["target_update_interval"],
-            train_freq=config["train_freq"],
-            gradient_steps=config["gradient_steps"],
-            exploration_fraction=config["exploration_fraction"],
-            exploration_final_eps=config["exploration_final_eps"],
-            tensorboard_log=f"{path_to_jdrive}/sb3_runs/{run}",
-            verbose=0,
-        )
-
-        model_save_path = f"{path_to_jdrive}/sb3_models/{run}/"
-        final_model = model.learn(
-            total_timesteps=config["n_timesteps"],
-            # tb_log_name=f"{run}",
-            progress_bar=True,
-            callback=CheckpointCallback(
-                save_freq=1e5,
-                save_path=model_save_path,
-                name_prefix=f"{run}_model",
-            ),
-        )
-
-        # open/create file for writing config
-        with open(model_save_path + "config.txt", "w") as convert_file:
-            convert_file.write(json.dumps(config))
+    # open/create file for writing config
+    with open(model_save_path + "config.txt", "w") as convert_file:
+        convert_file.write(json.dumps(config))
 
 
 if __name__ == "__main__":
-    shrinkFactor = 24
+    shrinkFactor = 10
     img_size = (
         1920 // shrinkFactor,
         1080 // shrinkFactor,
@@ -145,7 +103,7 @@ if __name__ == "__main__":
 
     # taken from https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/dqn.yml
     config = {
-        "n_timesteps": 5e6,  # sb3 dqn runs go up to 1e7 at most
+        "n_timesteps": 1e6,  # sb3 dqn runs go up to 1e7 at most
         "policy": "CnnPolicy",
         "env": "CustomDuckieTown",
         "actions": [-30, 0, 30],
@@ -164,10 +122,10 @@ if __name__ == "__main__":
         "exploration_final_eps": 0.01,
         "yellow_image_noise": True,
         "blackAndWhite": True,
-        "use3imgBuffer": True,  #! only works if blackAndWhite is true
+        "use3imgBuffer": False,  #! only works if blackAndWhite is true
         "randomizeCameraParamsOnReset": True,
-        "yellow_features_only": True,  # only works if blackAndWhite is true.
+        "yellow_features_only": False,  # only works if blackAndWhite is true.
         "notes": "trying training on buffer of yellow only images, downsampled for higher model eval speed. ",
     }
 
-    train(config, False)
+    train(config, True)
