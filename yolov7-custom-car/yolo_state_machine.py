@@ -6,7 +6,7 @@ import cv2
 import torch
 
 sys.path.append('..')
-sys.path.append('/fsg/hps22/self-driving-cars/')
+# sys.path.append('/fsg/hps22/self-driving-cars/')
 import numpy as np
 from detect_custom import detect
 from models.experimental import attempt_load
@@ -50,14 +50,15 @@ class StateMachine:
         parser.add_argument('--no-trace', action='store_false', help='don`t trace model')
 
         parser.add_argument('--control', type=str, default='rl', help='rl or pid')
-        parser.add_argument('--yolo', type=bool, default=True, help='True: use yolo for sign recognition') 
+        parser.add_argument('--yolo', type=bool, default=False, help='True: use yolo for sign recognition') 
         parser.add_argument('--speed', type=float, default=0.8, help='.8 to 3.0')
         parser.add_argument('--display', type=bool, default=True, help='True: show what camera is seeing')
         self.opt = parser.parse_args()
 
         self.device = select_device(self.opt.device)
-        self.yolo_model = attempt_load(self.opt.weights, map_location=self.device).cuda()  # load FP32 model
-        self.yolo_model(torch.zeros(1, 3, 480, 640).to(self.device).type_as(next(self.yolo_model.parameters())))  # run once
+        if self.opt.yolo:
+            self.yolo_model = attempt_load(self.opt.weights, map_location=self.device).cuda()  # load FP32 model
+            self.yolo_model(torch.zeros(1, 3, 480, 640).to(self.device).type_as(next(self.yolo_model.parameters())))  # run once
 
         # car params
         self.speed = self.opt.speed
@@ -83,8 +84,8 @@ class StateMachine:
     def start_car(self):
         if self.opt.control == 'rl':
             # load in RL model
-            model_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/curtis-20230325-124016'
-            zip_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/curtis-20230325-124016/curtis-20230325-124016_model_800000_steps.zip'
+            model_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/20230320-123941'
+            zip_path = '/home/car/Desktop/self-driving-cars/sb3_models/local/20230320-123941/20230320-123941_model_4800000_steps.zip'
             self.rl_model, self.config = setup_loading_model(model_path, zip_path)
 
         elif self.opt.control == 'pid':
@@ -125,11 +126,12 @@ class StateMachine:
         # display what camera sees
         if self.opt.display:
             cv2.namedWindow("car_raw", cv2.WINDOW_NORMAL)
-            cv2.imshow("car_Raw", self.image)
+            cv2.imshow("car_raw", self.image)
 
             if (cv2.waitKey(1) == ord('q')):
                 cv2.destroyAllWindows()
 
+        # print(self.image.shape)
         if self.opt.control == 'rl':
             # prepare image to go into network
             preprocessedImg = preprocess_image(
@@ -138,10 +140,23 @@ class StateMachine:
                 blackAndWhite=self.config["blackAndWhite"],
                 addYellowNoise=False, #no need to add noise to real world
                 use3imgBuffer=self.config["use3imgBuffer"],
-                yellow_features_only=self.config["yellow_features_only"]
+                yellow_features_only=False,#self.config["yellow_features_only"],
+                camera_resolution=self.config['camera_settings']['resolution']
             )
-            
+
+            cv2.namedWindow("processed_img", cv2.WINDOW_NORMAL)
+            cv2.imshow("processed_img", preprocessedImg)
+            # print(preprocessedImg.shape)
+            # networkImg = np.moveaxis(preprocessedImg, 2, 0)
+
+            # camera_resolution = self.config['camera_settings']['resolution']
+            # camera_resolution.reverse()
+            # networkImg = cv2.resize(preprocessedImg, tuple(camera_resolution))
+
             networkImg = np.moveaxis(preprocessedImg, 2, 0)
+            # print(networkImg.shape)
+            networkImg = np.moveaxis(networkImg, 1, 2)
+            # print(networkImg.shape)
 
             # get steering angle
             with torch.no_grad():

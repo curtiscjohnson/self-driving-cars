@@ -9,12 +9,13 @@ def preprocess_image(
     addYellowNoise=False,
     use3imgBuffer=False,
     yellow_features_only=False,
+    camera_resolution=(100,100)
 ):
     # cv2.namedWindow("input", cv2.WINDOW_NORMAL)
     # cv2.imshow("input", BGRimg)
     # cv2.waitKey(0)
 
-    assert BGRimg.shape == (640,480)
+    # assert BGRimg.shape == (640,480), f'Image size is _{BGRimg.shape}, not (640, 480)'
 
     BGRimg = cv2.bilateralFilter(
         BGRimg, 3, 50, 50
@@ -25,8 +26,8 @@ def preprocess_image(
     BGRimg[0 : height // 2, :, :] = (0, 0, 0)
 
     # black out bottom strip of image
-    if not removeBottomStrip:
-        BGRimg[height - 1 : height, :, :] = (0, 0, 0)
+    if removeBottomStrip:
+        BGRimg[height - 25 : height, :, :] = (0, 0, 0)
 
     # cv2.namedWindow("filtered", cv2.WINDOW_NORMAL)
     # cv2.imshow("filtered", BGRimg)
@@ -76,18 +77,6 @@ def preprocess_image(
         # cv2.imshow("black and white", blackAndWhiteImage)
         # cv2.waitKey(0)
 
-        # if use3imgBuffer:
-        #     return blackAndWhiteImage
-
-        # blackImg = np.zeros(BGRimg.shape, dtype=np.uint8)
-        # blackImg[:, :, 0] = blackAndWhiteImage
-        # blackImg[:, :, 1] = blackAndWhiteImage
-        # blackImg[:, :, 2] = blackAndWhiteImage
-
-        # cv2.imshow("car", blackImg)
-        # cv2.destroyAllWindows()
-
-
 
         frame_HLS = cv2.cvtColor(BGRimg, cv2.COLOR_BGR2HLS)
         frame_gray = cv2. cvtColor(BGRimg, cv2.COLOR_BGR2GRAY)
@@ -96,8 +85,25 @@ def preprocess_image(
         red_threshold = cv2.inRange(frame_HLS, (0, 101, 85), (15, 255, 255))
         white_threshold = cv2.inRange(frame_gray, 160, 255)
 
-        blackImg = cv2.add(yellow_threshold, cv2.add(red_threshold, white_threshold))
-        print("did what we want")
+        blackAndWhiteImage = cv2.add(yellow_threshold, cv2.add(red_threshold, white_threshold))
+
+        if use3imgBuffer:
+            return blackAndWhiteImage
+
+        blackImg = np.zeros(BGRimg.shape, dtype=np.uint8)
+        # print(blackImg.shape)
+        # print(blackAndWhiteImage.shape)
+        blackImg[:, :, 0] = blackAndWhiteImage
+        blackImg[:, :, 1] = blackAndWhiteImage
+        blackImg[:, :, 2] = blackAndWhiteImage
+
+        # blackImg[:, :] = blackAndWhiteImage
+        # blackImg[1, :, :] = blackAndWhiteImage
+        # blackImg[2, :, :] = blackAndWhiteImage
+
+        # cv2.imshow("car", blackImg)
+        # cv2.destroyAllWindows()
+        # print("did what we want")
     else:
         HSVimg = cv2.cvtColor(BGRimg, cv2.COLOR_BGR2HSV)
         HSVimg = cv2.bilateralFilter(HSVimg, 9, 75, 75)
@@ -116,5 +122,15 @@ def preprocess_image(
         mask = cv2.inRange(HSVimg, lower_red, upper_red)
         blackImg[mask > 0] = (0, 0, 255)
 
+    # return cv2.resize(blackImg, 
+    # print(blackImg.shape)
+    # print((3, *camera_resolution))
+    # return cv2.resize(blackImg, (3, *camera_resolution))
+    # print(camera_resolution)
+    # print(*camera_resolution)
+    # print((*camera_resolution))
+    # camera_resolution.reverse()
+    # print(camera_resolution)
+    # print(blackImg.shape)
+    return cv2.resize(blackImg, tuple(camera_resolution))
 
-    return cv2.resize(blackImg, (100,100))
