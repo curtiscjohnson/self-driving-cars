@@ -6,6 +6,7 @@ import random
 import cv2
 from img_utils import preprocess_image as image_process
 from collections import deque
+from copy import deepcopy
 
 
 class CustomDuckieTownSim(gym.Env):
@@ -74,6 +75,7 @@ class CustomDuckieTownSim(gym.Env):
             addYellowNoise=self.addYellowNoise,
             use3imgBuffer=self.use3imgBuffer,
             yellow_features_only=self.yellow_features_only,
+            camera_resolution=tuple(self.camera_settings['resolution'])
         )
 
         return processed_img.astype(np.uint8)
@@ -121,8 +123,9 @@ class CustomDuckieTownSim(gym.Env):
 
             # print(self.camera_settings["angle"]["pitch"])
             # print(self.camera_settings["angle"]["roll"])
-
-        self.sim = Simulator(cameraSettings=self.camera_settings)
+        tmpSettings = deepcopy(self.camera_settings)
+        tmpSettings["resolution"] = (640, 480)
+        self.sim = Simulator(cameraSettings=tmpSettings)
 
         startLocations = np.array(
             [

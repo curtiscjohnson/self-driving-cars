@@ -15,19 +15,17 @@ def preprocess_image(
     # cv2.imshow("input", BGRimg)
     # cv2.waitKey(0)
 
+    # crop top of image
+    height, width, depth = BGRimg.shape
+    BGRimg = BGRimg[height//2:height - 26, :, :]
+
+    BGRimg = cv2.resize(BGRimg, (147,240))
+
     # assert BGRimg.shape == (640,480), f'Image size is _{BGRimg.shape}, not (640, 480)'
-    BGRimg = cv2.resize(BGRimg, (512, 384))
     BGRimg = cv2.bilateralFilter(
         BGRimg, 3, 50, 50
     )  # theoretically good at removing noise but keeping sharp lines.
 
-    # black out top 1/3 of image
-    height, width, depth = BGRimg.shape
-    BGRimg[0 : height // 2, :, :] = (0, 0, 0)
-
-    # black out bottom strip of image
-    if removeBottomStrip:
-        BGRimg[height - 5 : height, :, :] = (0, 0, 0)
 
     # cv2.namedWindow("filtered", cv2.WINDOW_NORMAL)
     # cv2.imshow("filtered", BGRimg)
