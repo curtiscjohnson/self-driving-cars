@@ -51,8 +51,8 @@ class StateMachine:
 
         parser.add_argument('--control', type=str, default='rl', help='rl or pid')
         parser.add_argument('--yolo', type=bool, default=False, help='True: use yolo for sign recognition') 
-        parser.add_argument('--speed', type=float, default=0.8, help='.8 to 3.0')
-        parser.add_argument('--display', type=bool, default=False, help='True: show what camera is seeing')
+        parser.add_argument('--speed', type=float, default=1.0, help='.8 to 3.0')
+        parser.add_argument('--display', type=bool, default=True, help='True: show what camera is seeing')
         self.opt = parser.parse_args()
 
         self.device = select_device(self.opt.device)
@@ -121,9 +121,9 @@ class StateMachine:
 
         self.Car.drive(self.speed)
 
-        start1 = time.time()
+        # start1 = time.time()
         self.image = self.rs.getData(False)
-        getdata = time.time() - start1
+        # getdata = time.time() - start1
 
         # display what camera sees
         if self.opt.display:
@@ -135,7 +135,7 @@ class StateMachine:
 
         # print(self.image.shape)
         if self.opt.control == 'rl':
-            start = time.time()
+            # start = time.time()
 
             # prepare image to go into network
             preprocessedImg = preprocess_image(
@@ -147,29 +147,29 @@ class StateMachine:
                 yellow_features_only=False,#self.config["yellow_features_only"],
                 camera_resolution=self.config['camera_settings']['resolution']
             )
-            process_time = time.time() - start
+            # process_time = time.time() - start
 
-            # cv2.namedWindow("processed_img", cv2.WINDOW_NORMAL)
-            # cv2.imshow("processed_img", preprocessedImg)
+            cv2.namedWindow("processed_img", cv2.WINDOW_NORMAL)
+            cv2.imshow("processed_img", preprocessedImg)
             # print(preprocessedImg.shape)
             # networkImg = np.moveaxis(preprocessedImg, 2, 0)
 
             # camera_resolution = self.config['camera_settings']['resolution']
             # camera_resolution.reverse()
             # networkImg = cv2.resize(preprocessedImg, tuple(camera_resolution))
-            start = time.time()
+            # start = time.time()
             networkImg = np.moveaxis(preprocessedImg, 2, 0)
             # print(networkImg.shape)
             networkImg = np.moveaxis(networkImg, 1, 2)
             # print(networkImg.shape)
-            moveaxis = time.time() - start
+            # moveaxis = time.time() - start
 
             # get steering angle
-            start = time.time()
+            # start = time.time()
             with torch.no_grad():
                 action_idx = self.rl_model(torch.from_numpy(networkImg/255).float().cuda()).max(0)[1].view(1,1)  
                 angle = self.config["actions"][action_idx]
-            getaction = time.time() - start
+            # getaction = time.time() - start
 
         elif self.opt.control == 'pid':
             # prepare image to go into network
@@ -178,9 +178,9 @@ class StateMachine:
                 angle = self.pid(centers[-1][0])
 
         self.Car.steer(angle)
-        end = time.time()
+        # end = time.time()
 
-        print(f'getdata: {getdata}, process: {process_time}, moveaxis: {moveaxis}, getaction: {getaction}, loop time: {end-start1}')
+        # print(f'getdata: {getdata}, process: {process_time}, moveaxis: {moveaxis}, getaction: {getaction}, loop time: {end-start1}')
 
         if self.checkForSignsIndex % 7 == 0 and self.opt.yolo:
             self.state = 'check for signs'
