@@ -33,7 +33,7 @@ def preprocess_image(
     # cv2.waitKey(0)
 
     # ? may want to try adaptive thresholding on hardware. Might help with whites?
-    # ? https://docs.opencv.org/4.x/d7/d4d/tutorial_py_thresholding.html#:~:text=image-,Adaptive%20Thresholding,-In%20the%20previous
+    # ? https://docs.opencv2.org/4.x/d7/d4d/tutorial_py_thresholding.html#:~:text=image-,Adaptive%20Thresholding,-In%20the%20previous
 
     #! BGRimg comes in as height x width x channels
     if addYellowNoise:
@@ -54,39 +54,50 @@ def preprocess_image(
             cv2.rectangle(BGRimg, point, point_2, (0, 255, 255), -1)
 
     if blackAndWhite:
-        if yellow_features_only:
-            # take only yellow to grayscale operation - maybe do adaptive thresholding here?
-            HLSimg = cv2.cvtColor(BGRimg, cv2.COLOR_BGR2HLS)
-            lower_yellow = np.array([18, 73, 85])
-            upper_yellow = np.array([57, 216, 255])
-            blackAndWhiteImage = cv2.inRange(HLSimg, lower_yellow, upper_yellow)
-            # cv2.namedWindow("yellow_thresholded", cv2.WINDOW_NORMAL)
-            # cv2.imshow("yellow_thresholded", blackAndWhiteImage)
-            # cv2.waitKey(0)
-        else:
-            # take all color to grayscale
-            originalImage = BGRimg
-            grayImage = cv2.cvtColor(originalImage, cv2.COLOR_BGR2GRAY)
-            # (thresh, blackAndWhiteImage) = cv2.threshold(grayImage, 10, 255, cv2.THRESH_BINARY) #for sim
-            (thresh, blackAndWhiteImage) = cv2.threshold(
-                grayImage, 120, 255, cv2.THRESH_BINARY
-            )  # for hw
+        # if yellow_features_only:
+        #     # take only yellow to grayscale operation - maybe do adaptive thresholding here?
+        #     HLSimg = cv2.cvtColor(BGRimg, cv2.COLOR_BGR2HLS)
+        #     lower_yellow = np.array([18, 73, 85])
+        #     upper_yellow = np.array([57, 216, 255])
+        #     blackAndWhiteImage = cv2.inRange(HLSimg, lower_yellow, upper_yellow)
+        #     # cv2.namedWindow("yellow_thresholded", cv2.WINDOW_NORMAL)
+        #     # cv2.imshow("yellow_thresholded", blackAndWhiteImage)
+        #     # cv2.waitKey(0)
+        # else:
+        #     # take all color to grayscale
+        #     originalImage = BGRimg
+        #     grayImage = cv2.cvtColor(originalImage, cv2.COLOR_BGR2GRAY)
+        #     # (thresh, blackAndWhiteImage) = cv2.threshold(grayImage, 10, 255, cv2.THRESH_BINARY) #for sim
+        #     (thresh, blackAndWhiteImage) = cv2.threshold(
+        #         grayImage, 120, 255, cv2.THRESH_BINARY
+        #     )  # for hw
 
         # cv2.namedWindow("black and white", cv2.WINDOW_NORMAL)
         # cv2.imshow("black and white", blackAndWhiteImage)
         # cv2.waitKey(0)
 
-        if use3imgBuffer:
-            return blackAndWhiteImage
+        # if use3imgBuffer:
+        #     return blackAndWhiteImage
 
-        blackImg = np.zeros(BGRimg.shape, dtype=np.uint8)
-        blackImg[:, :, 0] = blackAndWhiteImage
-        blackImg[:, :, 1] = blackAndWhiteImage
-        blackImg[:, :, 2] = blackAndWhiteImage
+        # blackImg = np.zeros(BGRimg.shape, dtype=np.uint8)
+        # blackImg[:, :, 0] = blackAndWhiteImage
+        # blackImg[:, :, 1] = blackAndWhiteImage
+        # blackImg[:, :, 2] = blackAndWhiteImage
 
         # cv2.imshow("car", blackImg)
         # cv2.destroyAllWindows()
 
+
+
+        frame_HLS = cv2.cvtColor(BGRimg, cv2.COLOR_BGR2HLS)
+        frame_gray = cv2. cvtColor(BGRimg, cv2.COLOR_BGR2GRAY)
+
+        yellow_threshold = cv2.inRange(frame_HLS, (18, 73, 85), (57, 216, 255))
+        red_threshold = cv2.inRange(frame_HLS, (0, 101, 85), (15, 255, 255))
+        white_threshold = cv2.inRange(frame_gray, 160, 255)
+
+        blackImg = cv2.add(yellow_threshold, cv2.add(red_threshold, white_threshold))
+        print("did what we want")
     else:
         HSVimg = cv2.cvtColor(BGRimg, cv2.COLOR_BGR2HSV)
         HSVimg = cv2.bilateralFilter(HSVimg, 9, 75, 75)
