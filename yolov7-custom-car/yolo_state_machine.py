@@ -30,7 +30,7 @@ class StateMachine:
 
         # Initialize YOLO Network
         parser = argparse.ArgumentParser()
-        parser.add_argument('--weights', nargs='+', type=str, default='yolov7-custom.pt', help='model.pt path(s)')
+        parser.add_argument('--weights', nargs='+', type=str, default='yolov7-custom-car/yolov7-custom.pt', help='model.pt path(s)')
         parser.add_argument('--source', type=str, default='2.jpg', help='source')  # file/folder, 0 for webcam
         parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
         parser.add_argument('--conf-thres', type=float, default=0.5, help='object confidence threshold')
@@ -263,7 +263,7 @@ class StateMachine:
     def cleanup_network_output(self, signs_seen, signs_seen_location, signs_seen_confidence):
 
         # ['stop_sign','school_zone','construction_zone', 'do_not_pass','speed_limit','deer_crossing','rr_x','rr_circle','stop_light']
-        minimumArea = [9500., 18000., 13500., 4500., 6500., 11500., 6000., 12500., 10000.]
+        minimumArea = np.array([9500.*0, 18000.*0, 13500.*0.65, 4500.*0, 6500.*0, 8000., 12000.*.65, 12500.*0, 10000.*0])
 
         # signs_seen is a list of indexes of signs that were seen in the image
         if len(signs_seen) > 0:
