@@ -84,8 +84,9 @@ class CustomDuckieTownSim(gym.Env):
     def step(self, action):
         self.steering_angle+=self.action_angles[action]/3
         self.steering_angle = np.clip(self.steering_angle, -30, 30)
+        
         raw_img, reward, self.done = self.sim.step(
-            steer=self.steering_angle, speed=0.8, display=self.display
+            steer=self.action_angles[action], speed=0.8, display=self.display
         )
         self.info = {}
         #! sim.step() returns raw image as height x width x channels.
@@ -123,8 +124,8 @@ class CustomDuckieTownSim(gym.Env):
         self.observation_buffer = deque(self.initial_obs, maxlen=3)
 
         if self.randomizeCameraParamOnReset:
-            self.camera_settings["angle"]["pitch"] = np.random.uniform(-10, 0)
-            self.camera_settings["angle"]["roll"] = np.random.uniform(-5, 5)
+            self.camera_settings["angle"]["pitch"] = np.random.uniform(-5, 0)
+            self.camera_settings["angle"]["roll"] = np.random.uniform(-2, 2)
 
             # print(self.camera_settings["angle"]["pitch"])
             # print(self.camera_settings["angle"]["roll"])
@@ -132,61 +133,17 @@ class CustomDuckieTownSim(gym.Env):
         tmpSettings["resolution"] = (640, 480)
         self.sim = Simulator(cameraSettings=tmpSettings)
 
-        startLocations = np.array(
-            [
-                [0, 1],
-                [0, 2],
-                [0, 3],
-                [0, 4],
-                [0, 5],
-                [0, 6],
-                [0, 7],
-                [1, 0],
-                [1, 1],
-                [1, 4],
-                [1, 7],
-                [2, 2],
-                [2, 3],
-                [1, 4],
-                [2, 5],
-                [2, 6],
-                [2, 0],
-                [5, 1],
-                [3, 2],
-                [2, 4],
-                [5, 5],
-                [5, 6],
-                [2, 7],
-                [3, 0],
-                [7, 1],
-                [4, 2],
-                [7, 3],
-                [5, 4],
-                [6, 5],
-                [3, 7],
-                [4, 0],
-                [5, 2],
-                [7, 4],
-                [7, 5],
-                [4, 7],
-                [5, 0],
-                [7, 2],
-                [5, 7],
-                [6, 0],
-            ]
-        )
-        startLoc = random.randint(0, 38)
+        tmpMapSettings = deepcopy(self.map_parameters)
+        tmpMapSettings["loops"] = random.randint(1,3)
+        tmpMapSettings["expansions"] = random.randint(3,6)
+        tmpMapSettings["complications"] = random.randint(2,5)
+
+        self.sim = Simulator(cameraSettings=tmpSettings)
 
         self.sim.start(
-            mapSeed="real",
-            mapParameters=self.map_parameters,
+            mapSeed=random.randint(0,1000),
+            mapParameters=tmpMapSettings,
             carParameters=self.car_parameters,
-            startPoint=(
-                int(startLocations[startLoc, 0]),
-                int(startLocations[startLoc, 1]),
-                0,
-                0,
-            ),
         )
 
         # where, facing = self.sim.RealSense.parent.ackermann.pose()

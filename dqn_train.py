@@ -60,7 +60,7 @@ def train(config, display=False):
         # tb_log_name=f"{run}",
         progress_bar=True,
         callback=CheckpointCallback(
-            save_freq=1e5,
+            save_freq=.5e5,
             save_path=model_save_path,
             name_prefix=f"{run}_model",
         ),
@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
     # taken from https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/dqn.yml
     config = {
-        "n_timesteps": 1e6,  # sb3 dqn runs go up to 1e7 at most
+        "n_timesteps": 2.5e6,  # sb3 dqn runs go up to 1e7 at most
         "policy": "CnnPolicy",
         "env": "CustomDuckieTown",
         "actions": [-30, 0, 30],
@@ -118,14 +118,14 @@ if __name__ == "__main__":
         "target_update_interval": 1000,
         "train_freq": 4,
         "gradient_steps": 1,
-        "exploration_fraction": 0.25,
+        "exploration_fraction": 0.5,
         "exploration_final_eps": 0.01,
         "yellow_image_noise": True,
         "blackAndWhite": True,
         "use3imgBuffer": False,  #! only works if blackAndWhite is true
         "randomizeCameraParamsOnReset": True,
         "yellow_features_only": False,  # only works if blackAndWhite is true.
-        "notes": "trying training on buffer of yellow only images, downsampled for higher model eval speed. ",
+        "notes": "not doing increment, just raw output",
     }
 
     train(config, True)
