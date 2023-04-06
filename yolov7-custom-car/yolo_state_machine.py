@@ -30,7 +30,7 @@ class StateMachine:
 
         # Initialize YOLO Network
         parser = argparse.ArgumentParser()
-        parser.add_argument('--weights', nargs='+', type=str, default='yolov7-custom.pt', help='model.pt path(s)')
+        parser.add_argument('--weights', nargs='+', type=str, default='yolov7-custom-car/yolov7-custom.pt', help='model.pt path(s)')
         parser.add_argument('--source', type=str, default='2.jpg', help='source')  # file/folder, 0 for webcam
         parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
         parser.add_argument('--conf-thres', type=float, default=0.5, help='object confidence threshold')
@@ -49,11 +49,13 @@ class StateMachine:
         parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
         parser.add_argument('--no-trace', action='store_false', help='don`t trace model')
 
-        parser.add_argument('--control', type=str, default='rl', help='rl or pid')
-        parser.add_argument('--yolo', type=bool, default=False, help='True: use yolo for sign recognition') 
+        parser.add_argument('--control', type=str, default='pid', help='rl or pid')
         parser.add_argument('--speed', type=float, default=1.0, help='.8 to 3.0')
-        parser.add_argument('--display', type=bool, default=True, help='True: show what camera is seeing')
+        parser.add_argument('--yolo', action='store_true', help='True: use yolo for sign recognition') 
+        parser.add_argument('--display', action='store_true', help='True: show what camera is seeing')
         self.opt = parser.parse_args()
+
+        print(self.opt.yolo)
 
         self.device = select_device(self.opt.device)
         if self.opt.yolo:
@@ -64,6 +66,7 @@ class StateMachine:
         self.speed = self.opt.speed
 
         self.label_names = ['stop_sign','school_zone','construction_zone', 'do_not_pass','speed_limit','deer_crossing','rr_x','rr_circle','stop_light']
+        self.angle = 0
 
     def state_machine(self):
 
@@ -118,6 +121,7 @@ class StateMachine:
             self.state = 'drive'
 
     def drive(self):
+        # print("driving")
 
         self.Car.drive(self.speed)
 
@@ -168,51 +172,53 @@ class StateMachine:
             # start = time.time()
             with torch.no_grad():
                 action_idx = self.rl_model(torch.from_numpy(networkImg/255).float().cuda()).max(0)[1].view(1,1)  
-                angle = self.config["actions"][action_idx]
+                self.angle = self.config["actions"][action_idx]
             # getaction = time.time() - start
 
         elif self.opt.control == 'pid':
             # prepare image to go into network
             centers = get_yellow_centers(self.image)
             if centers != "None":
-                angle = self.pid(centers[-1][0])
+                self.angle = self.pid(centers[-1][0])
 
-        self.Car.steer(angle)
+        self.Car.steer(self.angle)
         # end = time.time()
 
         # print(f'getdata: {getdata}, process: {process_time}, moveaxis: {moveaxis}, getaction: {getaction}, loop time: {end-start1}')
-
-        if self.checkForSignsIndex % 7 == 0 and self.opt.yolo:
+        self.checkForSignsIndex += 1
+        if self.checkForSignsIndex % 10 == 0 and self.opt.yolo:
             self.state = 'check for signs'
+            self.checkForSignsIndex = 0
 
     def check_for_signs(self):
+        # print("checking for signs")
 
         # imgToNetwork = self.preprocess_image(self.image)
         # cv2.imwrite('/home/car/Desktop/self-driving-cars/yolov7_sign_detection_copy/1.jpg', self.image)
         sign = self.get_current_sign()
 
-        if sign == 'stop_sign':
+        #logic to stop closer to stop sign
+        # if the last sign seen was a stop sign, and now with new frame we do NOT see a stop sign, stop.
+        if self.lastSign =='stop_sign' and sign != "stop_sign":
             self.Car.drive(0)
+            time.sleep(2)
+            self.lastSign = sign
+        elif sign == 'stop_sign':
             if self.lastSign != 'stop_sign':
                 self.lastSign = 'stop_sign'
-                time.sleep(2)
         elif sign == 'school_zone':
-            self.Car.drive(0)
             if self.lastSign != 'school_zone':
                 self.lastSign = 'school_zone'
                 self.Car.music(4)
         elif sign == 'construction_zone':
-            self.Car.drive(0)
             if self.lastSign != 'construction_zone':
                 self.lastSign = 'construction_zone'
                 self.Car.music(2)
         elif sign == 'do_not_pass':
-            self.Car.drive(0)
             if self.lastSign != 'do_not_pass':
                 self.lastSign = 'do_not_pass'
                 self.Car.music(0)
-        if sign == 'speed_limit':
-            self.Car.drive(0)
+        elif sign == 'speed_limit':
             if self.lastSign != 'speed_limit':
                 self.lastSign = 'speed_limit'
                 self.Car.music(1)
@@ -237,6 +243,7 @@ class StateMachine:
                 self.lastSign = 'stop_light'
                 self.Car.music(7)
 
+
         self.state = 'drive'
 
     def get_current_sign(self):
@@ -244,6 +251,7 @@ class StateMachine:
         loop_time = time.time()
         # img = cv2.imread('8.jpg')
         img = self.image
+        # cv2.imwrite(str(loop_time)+'.jpg', img)
 
         with torch.no_grad():        
             signs_seen, signs_seen_location, signs_seen_confidence = detect(self.opt, self.device, self.yolo_model, img)
@@ -260,7 +268,7 @@ class StateMachine:
     def cleanup_network_output(self, signs_seen, signs_seen_location, signs_seen_confidence):
 
         # ['stop_sign','school_zone','construction_zone', 'do_not_pass','speed_limit','deer_crossing','rr_x','rr_circle','stop_light']
-        minimumArea = [9500., 18000., 13500., 4500., 6500., 11500., 6000., 12500., 10000.]
+        minimumArea = np.array([9500.*.5, 18000.*0.5, 13500.*0.5, 4500.*0, 6500.*0, 8000., 12000.*.5, 12500.*0, 10000.*.6])
 
         # signs_seen is a list of indexes of signs that were seen in the image
         if len(signs_seen) > 0:
