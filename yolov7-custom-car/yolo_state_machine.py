@@ -186,7 +186,7 @@ class StateMachine:
 
         # print(f'getdata: {getdata}, process: {process_time}, moveaxis: {moveaxis}, getaction: {getaction}, loop time: {end-start1}')
         self.checkForSignsIndex += 1
-        if self.checkForSignsIndex % 6 == 0 and self.opt.yolo:
+        if self.checkForSignsIndex % 10 == 0 and self.opt.yolo:
             self.state = 'check for signs'
             self.checkForSignsIndex = 0
 
@@ -207,29 +207,28 @@ class StateMachine:
             if self.lastSign != 'stop_sign':
                 self.lastSign = 'stop_sign'
         elif sign == 'school_zone':
-            self.Car.drive(0)
             if self.lastSign != 'school_zone':
                 self.lastSign = 'school_zone'
                 self.Car.music(4)
         elif sign == 'construction_zone':
-            self.Car.drive(0)
             if self.lastSign != 'construction_zone':
                 self.lastSign = 'construction_zone'
                 self.Car.music(2)
         elif sign == 'do_not_pass':
-            self.Car.drive(0)
             if self.lastSign != 'do_not_pass':
                 self.lastSign = 'do_not_pass'
                 self.Car.music(0)
         elif sign == 'speed_limit':
-            self.Car.drive(0)
             if self.lastSign != 'speed_limit':
                 self.lastSign = 'speed_limit'
                 self.Car.music(1)
         elif sign == 'deer_crossing':
             self.Car.drive(0)
             if self.lastSign != 'deer_crossing':
-                self.Car.drive(0)
+                self.lastSign = 'deer_crossing'
+                self.Car.music(5)
+        elif sign == 'rr_x':
+            self.Car.drive(0)
             if self.lastSign != 'rr_x':
                 self.lastSign = 'rr_x'
                 self.Car.music(3)
@@ -269,7 +268,7 @@ class StateMachine:
     def cleanup_network_output(self, signs_seen, signs_seen_location, signs_seen_confidence):
 
         # ['stop_sign','school_zone','construction_zone', 'do_not_pass','speed_limit','deer_crossing','rr_x','rr_circle','stop_light']
-        minimumArea = np.array([9500.*.5, 18000.*0.7, 13500.*0.7, 4500.*0, 6500.*0, 8000., 12000.*.7, 12500.*0, 10000.*1])
+        minimumArea = np.array([9500.*.5, 18000.*0.5, 13500.*0.5, 4500.*0, 6500.*0, 8000., 12000.*.5, 12500.*0, 10000.*.6])
 
         # signs_seen is a list of indexes of signs that were seen in the image
         if len(signs_seen) > 0:
