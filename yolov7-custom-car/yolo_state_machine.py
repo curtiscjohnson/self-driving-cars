@@ -49,11 +49,13 @@ class StateMachine:
         parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
         parser.add_argument('--no-trace', action='store_false', help='don`t trace model')
 
-        parser.add_argument('--control', type=str, default='rl', help='rl or pid')
-        parser.add_argument('--yolo', type=bool, default=False, help='True: use yolo for sign recognition') 
+        parser.add_argument('--control', type=str, default='pid', help='rl or pid')
+        parser.add_argument('--yolo', action='store_true', help='True: use yolo for sign recognition') 
         parser.add_argument('--speed', type=float, default=1.0, help='.8 to 3.0')
-        parser.add_argument('--display', type=bool, default=True, help='True: show what camera is seeing')
+        parser.add_argument('--display', action='store_true', help='True: show what camera is seeing')
         self.opt = parser.parse_args()
+
+        print(self.opt.yolo)
 
         self.device = select_device(self.opt.device)
         if self.opt.yolo:
