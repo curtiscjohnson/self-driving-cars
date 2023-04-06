@@ -50,8 +50,8 @@ class StateMachine:
         parser.add_argument('--no-trace', action='store_false', help='don`t trace model')
 
         parser.add_argument('--control', type=str, default='pid', help='rl or pid')
-        parser.add_argument('--yolo', action='store_true', help='True: use yolo for sign recognition') 
         parser.add_argument('--speed', type=float, default=1.0, help='.8 to 3.0')
+        parser.add_argument('--yolo', action='store_true', help='True: use yolo for sign recognition') 
         parser.add_argument('--display', action='store_true', help='True: show what camera is seeing')
         self.opt = parser.parse_args()
 
@@ -66,6 +66,7 @@ class StateMachine:
         self.speed = self.opt.speed
 
         self.label_names = ['stop_sign','school_zone','construction_zone', 'do_not_pass','speed_limit','deer_crossing','rr_x','rr_circle','stop_light']
+        self.angle = 0
 
     def state_machine(self):
 
@@ -170,16 +171,16 @@ class StateMachine:
             # start = time.time()
             with torch.no_grad():
                 action_idx = self.rl_model(torch.from_numpy(networkImg/255).float().cuda()).max(0)[1].view(1,1)  
-                angle = self.config["actions"][action_idx]
+                self.angle = self.config["actions"][action_idx]
             # getaction = time.time() - start
 
         elif self.opt.control == 'pid':
             # prepare image to go into network
             centers = get_yellow_centers(self.image)
             if centers != "None":
-                angle = self.pid(centers[-1][0])
+                self.angle = self.pid(centers[-1][0])
 
-        self.Car.steer(angle)
+        self.Car.steer(self.angle)
         # end = time.time()
 
         # print(f'getdata: {getdata}, process: {process_time}, moveaxis: {moveaxis}, getaction: {getaction}, loop time: {end-start1}')
