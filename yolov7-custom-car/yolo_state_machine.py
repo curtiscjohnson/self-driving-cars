@@ -185,7 +185,7 @@ class StateMachine:
 
         # print(f'getdata: {getdata}, process: {process_time}, moveaxis: {moveaxis}, getaction: {getaction}, loop time: {end-start1}')
 
-        if self.checkForSignsIndex % 7 == 0 and self.opt.yolo:
+        if self.checkForSignsIndex % 5 == 0 and self.opt.yolo:
             self.state = 'check for signs'
 
     def check_for_signs(self):
@@ -263,7 +263,7 @@ class StateMachine:
     def cleanup_network_output(self, signs_seen, signs_seen_location, signs_seen_confidence):
 
         # ['stop_sign','school_zone','construction_zone', 'do_not_pass','speed_limit','deer_crossing','rr_x','rr_circle','stop_light']
-        minimumArea = np.array([9500.*0, 18000.*0, 13500.*0.65, 4500.*0, 6500.*0, 8000., 12000.*.65, 12500.*0, 10000.*0])
+        minimumArea = np.array([9500.*.9, 18000.*0.7, 13500.*0.7, 4500.*0, 6500.*0, 8000., 12000.*.7, 12500.*0, 10000.*1])
 
         # signs_seen is a list of indexes of signs that were seen in the image
         if len(signs_seen) > 0:
