@@ -121,6 +121,7 @@ class StateMachine:
             self.state = 'drive'
 
     def drive(self):
+        # print("driving")
 
         self.Car.drive(self.speed)
 
@@ -184,21 +185,27 @@ class StateMachine:
         # end = time.time()
 
         # print(f'getdata: {getdata}, process: {process_time}, moveaxis: {moveaxis}, getaction: {getaction}, loop time: {end-start1}')
-
-        if self.checkForSignsIndex % 5 == 0 and self.opt.yolo:
+        self.checkForSignsIndex += 1
+        if self.checkForSignsIndex % 6 == 0 and self.opt.yolo:
             self.state = 'check for signs'
+            self.checkForSignsIndex = 0
 
     def check_for_signs(self):
+        # print("checking for signs")
 
         # imgToNetwork = self.preprocess_image(self.image)
         # cv2.imwrite('/home/car/Desktop/self-driving-cars/yolov7_sign_detection_copy/1.jpg', self.image)
         sign = self.get_current_sign()
 
-        if sign == 'stop_sign':
+        #logic to stop closer to stop sign
+        # if the last sign seen was a stop sign, and now with new frame we do NOT see a stop sign, stop.
+        if self.lastSign =='stop_sign' and sign != "stop_sign":
             self.Car.drive(0)
+            time.sleep(2)
+            self.lastSign = sign
+        elif sign == 'stop_sign':
             if self.lastSign != 'stop_sign':
                 self.lastSign = 'stop_sign'
-                time.sleep(2)
         elif sign == 'school_zone':
             self.Car.drive(0)
             if self.lastSign != 'school_zone':
@@ -214,7 +221,7 @@ class StateMachine:
             if self.lastSign != 'do_not_pass':
                 self.lastSign = 'do_not_pass'
                 self.Car.music(0)
-        if sign == 'speed_limit':
+        elif sign == 'speed_limit':
             self.Car.drive(0)
             if self.lastSign != 'speed_limit':
                 self.lastSign = 'speed_limit'
@@ -222,10 +229,7 @@ class StateMachine:
         elif sign == 'deer_crossing':
             self.Car.drive(0)
             if self.lastSign != 'deer_crossing':
-                self.lastSign = 'deer_crossing'
-                self.Car.music(5)
-        elif sign == 'rr_x':
-            self.Car.drive(0)
+                self.Car.drive(0)
             if self.lastSign != 'rr_x':
                 self.lastSign = 'rr_x'
                 self.Car.music(3)
@@ -240,6 +244,7 @@ class StateMachine:
                 self.lastSign = 'stop_light'
                 self.Car.music(7)
 
+
         self.state = 'drive'
 
     def get_current_sign(self):
@@ -247,6 +252,7 @@ class StateMachine:
         loop_time = time.time()
         # img = cv2.imread('8.jpg')
         img = self.image
+        # cv2.imwrite(str(loop_time)+'.jpg', img)
 
         with torch.no_grad():        
             signs_seen, signs_seen_location, signs_seen_confidence = detect(self.opt, self.device, self.yolo_model, img)
@@ -263,7 +269,7 @@ class StateMachine:
     def cleanup_network_output(self, signs_seen, signs_seen_location, signs_seen_confidence):
 
         # ['stop_sign','school_zone','construction_zone', 'do_not_pass','speed_limit','deer_crossing','rr_x','rr_circle','stop_light']
-        minimumArea = np.array([9500.*.9, 18000.*0.7, 13500.*0.7, 4500.*0, 6500.*0, 8000., 12000.*.7, 12500.*0, 10000.*1])
+        minimumArea = np.array([9500.*.5, 18000.*0.7, 13500.*0.7, 4500.*0, 6500.*0, 8000., 12000.*.7, 12500.*0, 10000.*1])
 
         # signs_seen is a list of indexes of signs that were seen in the image
         if len(signs_seen) > 0:
