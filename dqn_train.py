@@ -24,6 +24,7 @@ def make_env(display, config):
         config["use3imgBuffer"],
         config["randomizeCameraParamsOnReset"],
         config["yellow_features_only"],
+        config["column_mask"],
         display,
     )
     env = Monitor(env)  # record stats such as returns
@@ -72,7 +73,7 @@ def train(config, display=False):
 
 
 if __name__ == "__main__":
-    shrinkFactor = 10
+    shrinkFactor = 20
     img_size = (
         1920 // shrinkFactor,
         1080 // shrinkFactor,
@@ -83,7 +84,7 @@ if __name__ == "__main__":
         "fov": {"diagonal": 77},  # realsense diagonal fov is 77 degrees IIRC
         "angle": {
             "roll": 0,
-            "pitch": -5,
+            "pitch": 10,
             "yaw": 0,
         },  # don't go too crazy with these, my code should be good up to like... 45 degrees probably? But the math gets unstable
         # "angle": {"roll": 13, "pitch": 30, "yaw": 30}, # don't go too crazy with these, my code should be good up to like... 45 degrees probably? But the math gets unstable
@@ -103,14 +104,14 @@ if __name__ == "__main__":
 
     # taken from https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/dqn.yml
     config = {
-        "n_timesteps": 2.5e6,  # sb3 dqn runs go up to 1e7 at most
+        "n_timesteps": 5e6,  # sb3 dqn runs go up to 1e7 at most
         "policy": "CnnPolicy",
         "env": "CustomDuckieTown",
         "actions": [-30, 0, 30],
         "camera_settings": cameraSettings,
         "map_parameters": mapParameters,
         "car_parameters": carParameters,
-        "learning_rate": 1e-4,
+        "learning_rate": .1e-4,
         "batch_size": 32,
         "buffer_size": 100000,
         "learning_starts": 100000,
@@ -120,12 +121,13 @@ if __name__ == "__main__":
         "gradient_steps": 1,
         "exploration_fraction": 0.5,
         "exploration_final_eps": 0.01,
-        "yellow_image_noise": True,
+        "yellow_image_noise": False,
         "blackAndWhite": True,
         "use3imgBuffer": False,  #! only works if blackAndWhite is true
         "randomizeCameraParamsOnReset": True,
         "yellow_features_only": False,  # only works if blackAndWhite is true.
-        "notes": "not doing increment, just raw output",
+        "column_mask":True,
+        "notes": "not doing increment, just raw output. Real map. Pitched down more. Column masking now",
     }
 
-    train(config, True)
+    train(config, False)

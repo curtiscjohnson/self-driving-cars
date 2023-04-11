@@ -25,6 +25,7 @@ class CustomDuckieTownSim(gym.Env):
         use3imgBuffer=False,
         randomizeCameraParamsOnReset=False,
         yellow_features_only=False,
+        column_mask=False,
         display=False,
     ):
         super().__init__()
@@ -34,6 +35,7 @@ class CustomDuckieTownSim(gym.Env):
         self.car_parameters = car_parameters
         self.display = display
         self.yellow_features_only = yellow_features_only
+        self.column_mask = column_mask
 
         # Define action and observation space
         # They must be gym.spaces objects
@@ -76,6 +78,7 @@ class CustomDuckieTownSim(gym.Env):
             addYellowNoise=self.addYellowNoise,
             use3imgBuffer=self.use3imgBuffer,
             yellow_features_only=self.yellow_features_only,
+            column_mask=self.column_mask,
             camera_resolution=tuple(self.camera_settings['resolution'])
         )
 
@@ -96,11 +99,11 @@ class CustomDuckieTownSim(gym.Env):
         if self.use3imgBuffer:
             self.observation_buffer.append(observation)
 
-        # cv2.namedWindow('observation', cv2.WINDOW_NORMAL)
-        # cv2.imshow('observation', observation)
-        # cv2.namedWindow('raw', cv2.WINDOW_NORMAL)
-        # cv2.imshow('raw', raw_img)
-        # cv2.waitKey(0)
+        cv2.namedWindow('observation', cv2.WINDOW_NORMAL)
+        cv2.imshow('observation', observation)
+        cv2.namedWindow('raw', cv2.WINDOW_NORMAL)
+        cv2.imshow('raw', raw_img)
+        cv2.waitKey(0)
 
 
         if self.use3imgBuffer:
@@ -124,7 +127,7 @@ class CustomDuckieTownSim(gym.Env):
         self.observation_buffer = deque(self.initial_obs, maxlen=3)
 
         if self.randomizeCameraParamOnReset:
-            self.camera_settings["angle"]["pitch"] = np.random.uniform(-5, 0)
+            self.camera_settings["angle"]["pitch"] = np.random.uniform(8, 12)
             self.camera_settings["angle"]["roll"] = np.random.uniform(-2, 2)
 
             # print(self.camera_settings["angle"]["pitch"])
@@ -134,14 +137,15 @@ class CustomDuckieTownSim(gym.Env):
         self.sim = Simulator(cameraSettings=tmpSettings)
 
         tmpMapSettings = deepcopy(self.map_parameters)
-        tmpMapSettings["loops"] = random.randint(1,3)
-        tmpMapSettings["expansions"] = random.randint(3,6)
-        tmpMapSettings["complications"] = random.randint(2,5)
+        # tmpMapSettings["loops"] = random.randint(1,3)
+        # tmpMapSettings["expansions"] = random.randint(5,7)
+        # tmpMapSettings["complications"] = random.randint(4,6)
 
         self.sim = Simulator(cameraSettings=tmpSettings)
 
         self.sim.start(
-            mapSeed=random.randint(0,1000),
+            # mapSeed=random.randint(0,1000),
+            mapSeed='real',
             mapParameters=tmpMapSettings,
             carParameters=self.car_parameters,
         )

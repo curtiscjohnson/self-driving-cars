@@ -9,6 +9,7 @@ def preprocess_image(
     addYellowNoise=False,
     use3imgBuffer=False,
     yellow_features_only=False,
+    column_mask=False,
     camera_resolution=(100,100)
 ):
     # cv2.namedWindow("input", cv2.WINDOW_NORMAL)
@@ -17,7 +18,7 @@ def preprocess_image(
 
     # crop top of image
     height, width, depth = BGRimg.shape
-    BGRimg = BGRimg[height//2:height - 26, :, :]
+    BGRimg = BGRimg[height//2:height - 35, :, :]
 
     BGRimg = cv2.resize(BGRimg, (147,240))
 
@@ -34,11 +35,34 @@ def preprocess_image(
     # ? may want to try adaptive thresholding on hardware. Might help with whites?
     # ? https://docs.opencv2.org/4.x/d7/d4d/tutorial_py_thresholding.html#:~:text=image-,Adaptive%20Thresholding,-In%20the%20previous
 
+
+    if column_mask:
+        frame_HLS = cv2.cvtColor(BGRimg, cv2.COLOR_BGR2HLS)
+        frame_HSV = cv2.cvtColor(BGRimg, cv2.COLOR_BGR2HSV)
+        blackImg = np.zeros(BGRimg.shape, dtype=np.uint8)
+        # print(blackImg.shape)
+        # print(blackAndWhiteImage.shape)
+        yellow_threshold = cv2.inRange(frame_HLS, (18, 73, 85), (57, 216, 255))
+        red_threshold = cv2.inRange(frame_HLS, (0, 101, 85), (15, 255, 255))
+
+        blurred = cv2.GaussianBlur(frame_HSV, (5,5),0)
+        white_lines = cv2.inRange(blurred, (0, 0, 146), (180, 37, 255))
+        last_y_vals = np.where(np.count_nonzero(white_lines, axis=0)==0, -1, (white_lines.shape[0]-1) - np.argmax(white_lines[::-1,:]!=0, axis=0))
+        row_indeces, col_indeces = np.indices(white_lines.shape)
+        mask = row_indeces <= last_y_vals.reshape(1,-1)
+        white_lines[mask] = 255
+
+        blackImg[:, :, 0] = yellow_threshold
+        blackImg[:, :, 1] = red_threshold
+        blackImg[:, :, 2] = white_lines
+
+        return cv2.resize(blackImg, tuple(camera_resolution))
+
     #! BGRimg comes in as height x width x channels
     if addYellowNoise:
         # Add random yellow squares to the image
         ypix, xpix, channels = BGRimg.shape
-        num_randpoints = 2
+        num_randpoints = 200
         x_points = np.random.randint(xpix // 3, xpix, size=num_randpoints)
         y_points = np.random.randint(ypix // 3, ypix, size=num_randpoints)
         for i in range(0, num_randpoints):
