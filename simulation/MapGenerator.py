@@ -21,7 +21,6 @@ class Map():
                 self.tiles = getMap()
                 return
             else:
-                np.random.seed(seed)
                 random.seed(seed)
         
         if (loops < 1):

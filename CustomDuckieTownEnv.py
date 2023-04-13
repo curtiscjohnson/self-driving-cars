@@ -65,6 +65,7 @@ class CustomDuckieTownSim(gym.Env):
         else:
             self.initial_obs = np.zeros((HEIGHT, WIDTH, N_CHANNELS))
 
+
     def preprocess_img(self, raw_img):
         # some feature engineering to separate out red/white/yellow was done in that paper
         # maybe also do some horizon cropping? maybe not important for sim training
@@ -137,15 +138,16 @@ class CustomDuckieTownSim(gym.Env):
         self.sim = Simulator(cameraSettings=tmpSettings)
 
         tmpMapSettings = deepcopy(self.map_parameters)
-        # tmpMapSettings["loops"] = random.randint(1,3)
-        # tmpMapSettings["expansions"] = random.randint(5,7)
-        # tmpMapSettings["complications"] = random.randint(4,6)
+        tmpMapSettings["loops"] = 2
+        tmpMapSettings["expansions"] = 7
+        tmpMapSettings["complications"] = 1
 
         self.sim = Simulator(cameraSettings=tmpSettings)
-
+        seed = random.randint(0,2)
+        print(seed)
         self.sim.start(
-            # mapSeed=random.randint(0,1000),
-            mapSeed='real',
+            mapSeed=42,
+            # mapSeed='real',
             mapParameters=tmpMapSettings,
             carParameters=self.car_parameters,
         )
