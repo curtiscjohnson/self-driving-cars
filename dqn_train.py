@@ -38,10 +38,29 @@ def train(config, display=False):
     run = time.strftime(netid+"-%Y%m%d-%H%M%S")
     path_to_jdrive = f"/fsg/{netid}/groups/self-driving"
 
+    def linear_schedule(initial_value: float):
+        """
+        Linear learning rate schedule.
+
+        :param initial_value: Initial learning rate.
+        :return: schedule that computes
+        current learning rate depending on remaining progress
+        """
+        def func(progress_remaining: float) -> float:
+            """
+            Progress will decrease from 1 (beginning) to 0.
+
+            :param progress_remaining:
+            :return: current learning rate
+            """
+            return progress_remaining * initial_value
+
+        return func
+
     model = DQN(
         config["policy"],
         env,
-        learning_rate=config["learning_rate"],
+        learning_rate=linear_schedule(config["learning_rate"]),
         batch_size=config["batch_size"],
         buffer_size=config["buffer_size"],
         learning_starts=config["learning_starts"],
@@ -73,13 +92,12 @@ def train(config, display=False):
 
 
 if __name__ == "__main__":
-    shrinkFactor = 20
+    shrinkFactor = 10 #30 is about as small as we can go
     img_size = (
-        1920 // shrinkFactor,
-        1080 // shrinkFactor,
+        640 // shrinkFactor,
+        480 // shrinkFactor,
     )  #! must be (cols, rows) i.e. (width, height)
     cameraSettings = {
-        # "resolution": (1920, 1080),
         "resolution": img_size,
         "fov": {"diagonal": 77},  # realsense diagonal fov is 77 degrees IIRC
         "angle": {
@@ -91,7 +109,7 @@ if __name__ == "__main__":
         "height": 66,  # 8 pixels/inch - represents how high up the camera is relative to the road
     }
 
-    mapParameters = {"loops": 1, "size": (6, 6), "expansions": 5, "complications": 4}
+    mapParameters = {"loops": 2, "size": (6, 6), "expansions": 7, "complications": 1}
 
     # Can also pass car parameters for max/min speed, etc
     carParameters = {
@@ -104,30 +122,30 @@ if __name__ == "__main__":
 
     # taken from https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/dqn.yml
     config = {
-        "n_timesteps": 5e6,  # sb3 dqn runs go up to 1e7 at most
+        "n_timesteps": 1e7,  # sb3 dqn runs go up to 1e7 at most
         "policy": "CnnPolicy",
         "env": "CustomDuckieTown",
         "actions": [-30, 0, 30],
         "camera_settings": cameraSettings,
         "map_parameters": mapParameters,
         "car_parameters": carParameters,
-        "learning_rate": .1e-4,
-        "batch_size": 32,
+        "learning_rate": 1e-3,
+        "batch_size": 128,
         "buffer_size": 100000,
         "learning_starts": 100000,
         "gamma": 0.99,
         "target_update_interval": 1000,
         "train_freq": 4,
         "gradient_steps": 1,
-        "exploration_fraction": 0.5,
+        "exploration_fraction": 0.25,
         "exploration_final_eps": 0.01,
         "yellow_image_noise": False,
         "blackAndWhite": True,
         "use3imgBuffer": False,  #! only works if blackAndWhite is true
         "randomizeCameraParamsOnReset": True,
         "yellow_features_only": False,  # only works if blackAndWhite is true.
-        "column_mask":True,
+        "column_mask":False,
         "notes": "not doing increment, just raw output. Real map. Pitched down more. Column masking now",
     }
 
-    train(config, False)
+    train(config, True)

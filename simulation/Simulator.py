@@ -134,10 +134,9 @@ class Simulator:
         if not isIntersection:
             if distToCenter < -60 or distToCenter > 60:
                 done = True
-                # reward = -1
             else:
-                reward += .5 / (np.abs(10 - distToCenter) + 1)
-                reward += .5 / (np.abs(np.degrees(bearingOffset)) + 1)
+                reward += .5 / 10*(np.abs(10 - distToCenter) + 1)
+                reward += .5 / 10*(np.abs(np.degrees(bearingOffset)) + 1)
 
         reward = float(reward)
         return reward, done

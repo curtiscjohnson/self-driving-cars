@@ -67,11 +67,6 @@ class CustomDuckieTownSim(gym.Env):
 
 
     def preprocess_img(self, raw_img):
-        # some feature engineering to separate out red/white/yellow was done in that paper
-        # maybe also do some horizon cropping? maybe not important for sim training
-        # also maybe stacking a short sequence of images too? - https://stable-baselines3.readthedocs.io/en/master/guide/vec_envs.html#vecframestack
-        # !SB3 CNNPolicy normalizes images by default.
-
         processed_img = image_process(
             raw_img,
             removeBottomStrip=True,
@@ -100,11 +95,12 @@ class CustomDuckieTownSim(gym.Env):
         if self.use3imgBuffer:
             self.observation_buffer.append(observation)
 
-        # cv2.namedWindow('observation', cv2.WINDOW_NORMAL)
-        # cv2.imshow('observation', observation)
-        # cv2.namedWindow('raw', cv2.WINDOW_NORMAL)
-        # cv2.imshow('raw', raw_img)
-        # cv2.waitKey(0)
+        if self.display:
+            cv2.namedWindow('observation', cv2.WINDOW_NORMAL)
+            cv2.imshow('observation', observation)
+            cv2.namedWindow('raw', cv2.WINDOW_NORMAL)
+            cv2.imshow('raw', raw_img)
+            cv2.waitKey(0)
 
 
         if self.use3imgBuffer:
@@ -143,21 +139,12 @@ class CustomDuckieTownSim(gym.Env):
         tmpMapSettings["complications"] = 1
 
         self.sim = Simulator(cameraSettings=tmpSettings)
-        seed = random.randint(0,2)
-        print(seed)
         self.sim.start(
             mapSeed=42,
             # mapSeed='real',
             mapParameters=tmpMapSettings,
             carParameters=self.car_parameters,
         )
-
-        # where, facing = self.sim.RealSense.parent.ackermann.pose()
-        # initial_img = self.sim.RealSense.camera.getImage(where, facing)
-        # print(f"initial_img.shape: {initial_img.shape}")
-        # observation = self.preprocess_img(initial_img)
-        # print(f"observation.shape: {observation.shape}")
-        # self.observation_buffer.append(observation)
 
         if self.use3imgBuffer:
             return np.dstack(self.initial_obs)  # reward, done, info can't be included
