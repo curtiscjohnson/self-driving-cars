@@ -30,7 +30,7 @@ class StateMachine:
 
         # Initialize YOLO Network
         parser = argparse.ArgumentParser()
-        parser.add_argument('--weights', nargs='+', type=str, default='best_more_recent.pt', help='model.pt path(s)')
+        parser.add_argument('--weights', nargs='+', type=str, default='yellowBird.pt', help='model.pt path(s)')
         parser.add_argument('--source', type=str, default='2.jpg', help='source')  # file/folder, 0 for webcam
         parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
         parser.add_argument('--conf-thres', type=float, default=0.5, help='object confidence threshold')
@@ -50,7 +50,7 @@ class StateMachine:
         parser.add_argument('--no-trace', action='store_false', help='don`t trace model')
 
         parser.add_argument('--control', type=str, default='pid', help='rl or pid')
-        parser.add_argument('--speed', type=float, default=0.85, help='.8 to 3.0')
+        parser.add_argument('--speed', type=float, default=0.8, help='.8 to 3.0')
         parser.add_argument('--yolo', action='store_true', help='True: use yolo for sign recognition') 
         parser.add_argument('--display', action='store_true', help='True: show what camera is seeing')
         self.opt = parser.parse_args()
@@ -323,7 +323,7 @@ class StateMachine:
                                 800.*0., # rr_circle
 
                                 400.*.5, # stop_light_green
-                                400.*.7, # stop_light_red
+                                400.*0.8, # stop_light_red
                                 0., # school_zone_back
                                 0., # deer_crossing_back
                                 0., # construction_back

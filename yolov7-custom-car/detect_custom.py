@@ -16,15 +16,17 @@ from utils.general import check_img_size, check_requirements, check_imshow, non_
 from utils.plots import plot_one_box
 from utils.torch_utils import select_device, load_classifier, time_synchronized, TracedModel
 
-def detect(opt, device, model, img, save_img=False):
+def detect(opt, device, model, img, save_img=False, half=False):
 
     t0 = time.time()
+    if half:
+        model.half()
 
     img = img[:,:,::-1].transpose(2,0,1)
     img = np.ascontiguousarray(img)
 
     img = torch.from_numpy(img).to(device)
-    img = img.float()  # uint8 to fp16/32
+    img = img.half() if half else img.float()  # uint8 to fp16/32
     img /= 255.0  # 0 - 255 to 0.0 - 1.0
     if img.ndimension() == 3:
         img = img.unsqueeze(0)

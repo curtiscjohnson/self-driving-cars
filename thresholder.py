@@ -1,7 +1,9 @@
 from __future__ import print_function
+from string import whitespace
 from tkinter.ttk import Frame
 import cv2 as cv
 import argparse
+import numpy as np
 
 max_value = 255
 max_value_H = 360//2
@@ -71,7 +73,7 @@ parser.add_argument('--camera', help='Camera divide number.', default=0, type=in
 args = parser.parse_args()
 
 ## [cap]
-cap = cv.VideoCapture("/dev/video2")
+cap = cv.VideoCapture("/dev/video3")
 ## [cap]
 
 ## [window]
@@ -101,10 +103,11 @@ while True:
 
     # black out top 1/3 of image
     height, width, depth = BGRimg.shape
-    BGRimg[0 : height // 2, :, :] = (0, 0, 0)
+    BGRimg[height // 2:, :, :] = (0, 0, 0)
+    BGRimg[:,:width//3:, :] = (0,0,0)
 
     # black out bottom strip of image
-    BGRimg[height - 25 : height, :, :] = (0, 0, 0)
+    BGRimg[height - 35 : height, :, :] = (0, 0, 0)
 
     # HLS COLOR SPACE THRESHOLDS
     # Yellow : 18-57 H, 73-216 L, 85-255 S
@@ -114,23 +117,40 @@ while True:
     frame_HLS = cv.cvtColor(BGRimg, cv.COLOR_BGR2HLS)
     frame_gray = cv. cvtColor(BGRimg, cv.COLOR_BGR2GRAY)
 
-    yellow_threshold = cv.inRange(frame_HLS, (18, 73, 85), (57, 216, 255))
-    red_threshold = cv.inRange(frame_HLS, (0, 101, 85), (15, 255, 255))
-    white_threshold = cv.inRange(frame_gray, 160, 255)
+    blurred = cv.GaussianBlur(frame_HLS, (5,5),0)
+    # yellow_threshold = cv.inRange(frame_HLS, (18, 73, 85), (57, 216, 255))
 
-    full_image = cv.add(yellow_threshold, cv.add(red_threshold, white_threshold))
+    yellow_threshold = cv.inRange(blurred, (low_H, low_L, low_S), (high_H, high_L, high_S))
+    # red_threshold = cv.inRange(frame_HLS, (0, 101, 85), (15, 255, 255))
+    # white_threshold = cv.inRange(frame_gray, 160, 255)
 
+    # full_image = cv.add(yellow_threshold, cv.add(red_threshold, white_threshold))
 
+    # rrx : H: 14-133, L:0-255, S:181-255
 
-    # blurred = cv.GaussianBlur(frame_threshold, (5,5),0)
     ## [while]
 
+    #test blacking out everything above first white pixel
+    # HSV space to get white: 0-180 H, 0-37 S, 146-255 V
+    white_lines = cv.inRange(blurred, (0, 0, 146), (180, 37, 255))
+
+    # for every column 0 to max x
+    # find the highest value of white along y
+    #black everything out on that column from y=0 to highest value
+    # print(np.max(white_lines))
+
+    last_y_vals = np.where(np.count_nonzero(white_lines, axis=0)==0, -1, (white_lines.shape[0]-1) - np.argmax(white_lines[::-1,:]!=0, axis=0))
+    row_indeces, col_indeces = np.indices(white_lines.shape)
+    mask = row_indeces <= last_y_vals.reshape(1,-1)
+    white_lines[mask] = 255
     ## [show]
     cv.imshow(window_capture_name, frame)
-    cv.imshow(window_detection_name, white_threshold)
-    cv.namedWindow('grayscale')
-    cv.imshow('grayscale', full_image)
+    # cv.imshow(window_detection_name, cv.add(white_lines, yellow_threshold))
+    cv.imshow(window_detection_name, yellow_threshold)
+    # cv.namedWindow('grayscale')
+    # cv.imshow('grayscale', full_image)
     ## [show]
+    print(np.sum(yellow_threshold//255))
 
     key = cv.waitKey(30)
     if key == ord('q') or key == 27:
