@@ -103,7 +103,7 @@ def preprocess_image(
         frame_HLS = cv2.cvtColor(BGRimg, cv2.COLOR_BGR2HLS)
         frame_gray = cv2. cvtColor(BGRimg, cv2.COLOR_BGR2GRAY)
 
-        yellow_threshold = cv2.inRange(frame_HLS, (18, 73, 85), (57, 216, 255))
+        yellow_threshold = cv2.inRange(frame_HLS, (18, 130, 91), (57, 216, 255))
         red_threshold = cv2.inRange(frame_HLS, (0, 101, 85), (15, 255, 255))
         white_threshold = cv2.inRange(frame_gray, 160, 255)
 

@@ -43,6 +43,9 @@ class RealSense:
         # config.enable_stream(rs.stream.gyro, rs.format.motion_xyz32f, 200)
         # Start streaming
         self.profile = self.pipeline.start(config)
+        device = self.profile.get_device().query_sensors()[1]
+        device.set_option(rs.option.frames_queue_size,1)
+
 
         try:
             self.device = self.profile.get_device()
@@ -55,7 +58,7 @@ class RealSense:
         # Create alignment primitive with color as its target stream:
         self.align = rs.align(rs.stream.color)
 
-        #grab 2 seconds of frames to deal with first few frames being bad.
+        # grab 2 seconds of frames to deal with first few frames being bad.
         numFrames = 2 * 30
         for i in range(0, numFrames):
             self.getData(returnDepth=False) 
