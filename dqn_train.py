@@ -102,7 +102,7 @@ if __name__ == "__main__":
         "fov": {"diagonal": 77},  # realsense diagonal fov is 77 degrees IIRC
         "angle": {
             "roll": 0,
-            "pitch": 10,
+            "pitch": 12,
             "yaw": 0,
         },  # don't go too crazy with these, my code should be good up to like... 45 degrees probably? But the math gets unstable
         # "angle": {"roll": 13, "pitch": 30, "yaw": 30}, # don't go too crazy with these, my code should be good up to like... 45 degrees probably? But the math gets unstable
@@ -130,7 +130,7 @@ if __name__ == "__main__":
         "map_parameters": mapParameters,
         "car_parameters": carParameters,
         "learning_rate": 1e-3,
-        "batch_size": 128,
+        "batch_size": 32,
         "buffer_size": 100000,
         "learning_starts": 100000,
         "gamma": 0.99,
@@ -142,10 +142,10 @@ if __name__ == "__main__":
         "yellow_image_noise": False,
         "blackAndWhite": True,
         "use3imgBuffer": False,  #! only works if blackAndWhite is true
-        "randomizeCameraParamsOnReset": True,
+        "randomizeCameraParamsOnReset": False,
         "yellow_features_only": False,  # only works if blackAndWhite is true.
         "column_mask":False,
         "notes": "not doing increment, just raw output. Real map. Pitched down more. Column masking now",
     }
 
-    train(config, True)
+    train(config, False)
